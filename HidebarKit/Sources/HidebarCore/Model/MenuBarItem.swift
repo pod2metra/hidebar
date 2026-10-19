@@ -37,7 +37,8 @@ public struct ItemFrame: Equatable, Codable, Sendable {
 public struct MenuBarItem: Equatable, Sendable {
     public let id: MenuBarItemID
     public let frame: ItemFrame
-    /// `false` for system items that must not be dragged (clock, Control Center).
+    /// `false` for system items that must not be dragged (clock, Control Center) and for
+    /// unmanaged items, whose identity is unreliable (see `ItemDiscovery.discover`).
     public let isMovable: Bool
     /// `false` for items that must stay on the bar (they cannot be pushed off by the separator).
     public let isHidable: Bool
