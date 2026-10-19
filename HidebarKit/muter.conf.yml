@@ -1,0 +1,8 @@
+executable: /usr/bin/swift
+arguments:
+- test
+exclude:
+- Package.swift
+- Tests
+- Sources/HidebarSystem
+excludeCalls: []
