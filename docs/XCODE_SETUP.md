@@ -46,8 +46,8 @@ rebuild. For stable permissions while developing:
 
 Keep this setting local: do not commit a `DEVELOPMENT_TEAM` value. Xcode writes it
 into `project.pbxproj`, so discard that change before committing
-(`git restore Hidebar.xcodeproj/project.pbxproj`), or keep it in an untracked
-`.xcconfig`.
+(`git restore Hidebar.xcodeproj/project.pbxproj`). For command-line builds pass it
+per invocation instead: `xcodebuild ... DEVELOPMENT_TEAM=<your team id>`.
 
 If a grant gets stuck, reset it and re-grant on the next launch:
 
