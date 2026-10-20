@@ -1,15 +1,23 @@
 /// A status item found on the bar, tied to the window it was read from.
 public struct DiscoveredItem: Equatable, Sendable {
     public let windowID: Int
+    /// The window's owner, which on macOS 26 is Control Center for every item.
+    public let ownerPID: Int
     public let item: MenuBarItem
     /// `false` when `item.id` cannot be trusted as an identity: the real owner is unknown or
     /// another item shares the ID. Such an item stays visible, is never moved and is never saved.
     public let isManaged: Bool
 
-    public init(windowID: Int, item: MenuBarItem, isManaged: Bool) {
+    public init(windowID: Int, ownerPID: Int, item: MenuBarItem, isManaged: Bool) {
         self.windowID = windowID
+        self.ownerPID = ownerPID
         self.item = item
         self.isManaged = isManaged
+    }
+
+    /// What a synthetic event must name to reach this item.
+    public var window: WindowTarget {
+        WindowTarget(windowID: windowID, ownerPID: ownerPID, frame: item.frame)
     }
 }
 
@@ -19,15 +27,13 @@ public struct ItemDiscovery: Sendable {
     public static let statusItemLayer = 25
     public static let controlCenterBundleID = "com.apple.controlcenter"
 
+    /// The items macOS does not let be moved (the same three Ice lists). Control Center's items
+    /// are named by their `AXIdentifier`, as their titles are localized and change ("Wi-Fi,
+    /// connected, 3 bars"); Siri has no identifier and is named by its title.
     private static let unmovable: Set<MenuBarItemID> = [
-        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "Clock"),
-        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "BentoBox"),
+        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "com.apple.menuextra.clock"),
+        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "com.apple.menuextra.controlcenter"),
         MenuBarItemID(ownerBundleID: "com.apple.systemuiserver", title: "Siri"),
-    ]
-    private static let movableButNotHidable: Set<MenuBarItemID> = [
-        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "AudioVideoModule"),
-        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "FaceTime"),
-        MenuBarItemID(ownerBundleID: controlCenterBundleID, title: "MusicRecognition"),
     ]
 
     private struct Candidate {
@@ -70,8 +76,29 @@ public struct ItemDiscovery: Sendable {
     /// item is unmanaged (visible, never moved, never saved); its ID is only a display fallback.
     /// Resolved items that share one ID are all unmanaged too.
     public func discover() -> [DiscoveredItem] {
+        read(windows: windowList.windows().filter(\.isOnscreen))
+    }
+
+    /// `discover()` plus the items that are on the bar but whose window is not on screen: covered
+    /// by the active app's menus (a Mac with a notch) or by something else. A drag still has to
+    /// name their window.
+    ///
+    /// Windows with the same frame are one item (the window server keeps copies of a window, for
+    /// other spaces among others). The copy kept is the onscreen one, else the oldest, which is
+    /// the one with the lowest number.
+    public func discoverAll() -> [DiscoveredItem] {
+        let byFrame = Dictionary(
+            grouping: windowList.windows().filter(ItemDiscovery.isStatusItem), by: \.frame)
+        return read(windows: byFrame.values.compactMap { $0.min(by: ItemDiscovery.isPreferred) })
+    }
+
+    private static func isPreferred(_ window: WindowInfo, over other: WindowInfo) -> Bool {
+        (window.isOnscreen ? 0 : 1, window.windowID) < (other.isOnscreen ? 0 : 1, other.windowID)
+    }
+
+    private func read(windows: [WindowInfo]) -> [DiscoveredItem] {
         let display = mainDisplay()
-        let candidates = windowList.windows()
+        let candidates = windows
             .filter(ItemDiscovery.isStatusItem)
             .filter { ItemDiscovery.isOnBar(of: display, $0) }
             .sorted { ($0.frame.x, $0.windowID) < ($1.frame.x, $1.windowID) }
@@ -83,8 +110,7 @@ public struct ItemDiscovery: Sendable {
     }
 
     private static func isStatusItem(_ window: WindowInfo) -> Bool {
-        window.layer == statusItemLayer && window.isOnscreen
-            && window.frame.width > 0 && window.frame.height > 0
+        window.layer == statusItemLayer && window.frame.width > 0 && window.frame.height > 0
     }
 
     private static func isOnBar(of display: ItemFrame, _ window: WindowInfo) -> Bool {
@@ -105,9 +131,10 @@ public struct ItemDiscovery: Sendable {
         let isManaged = candidate.isResolved && !isShared
         let id = candidate.id
         let isMovable = isManaged && !ItemDiscovery.unmovable.contains(id)
-        let isHidable = isMovable && !ItemDiscovery.movableButNotHidable.contains(id)
         let item = MenuBarItem(
-            id: id, frame: candidate.window.frame, isMovable: isMovable, isHidable: isHidable)
-        return DiscoveredItem(windowID: candidate.window.windowID, item: item, isManaged: isManaged)
+            id: id, frame: candidate.window.frame, isMovable: isMovable, isHidable: isMovable)
+        return DiscoveredItem(
+            windowID: candidate.window.windowID, ownerPID: candidate.window.ownerPID, item: item,
+            isManaged: isManaged)
     }
 }

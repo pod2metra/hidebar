@@ -8,6 +8,8 @@ final class AppServices {
     let permissions = TCCPermissionChecker()
     let store = LayoutStore(store: UserDefaultsStore())
     let snapshotter = SCKSnapshotter()
+    /// App names for everything the user reads; identities stay bundle ids.
+    let names = ItemNames(apps: WorkspaceAppNames())
     let toggleItem: NSStatusItemAdapter
     let groupItems = GroupStatusItems()
     let separatorItem: NSStatusItemAdapter
@@ -43,11 +45,15 @@ final class AppServices {
         let discovery = ItemDiscovery(
             windowList: windows, ownerResolver: AXOwnerResolver(windowList: windows, reader: reader),
             mainDisplay: MainDisplay.bounds)
-        let poster = CGEventPoster()
-        let locator = AXFrameLocator(reader: reader)
+        let poster = LoggingPoster(base: CGEventPoster())
+        let locator = LoggingLocator(base: AXFrameLocator(reader: reader))
         let moveClock = ThreadMoveClock()
+        let windowLocator = LoggingWindows(
+            base: DiscoveryWindowLocator(
+                discover: { discovery.discoverAll() }, windowList: windows))
         let executor = MoveExecutor(
-            poster: poster, locator: locator, clock: moveClock, inputGate: inputGate)
+            poster: poster, locator: locator, windows: windowLocator, clock: moveClock,
+            inputGate: inputGate)
         let menuProbe = OpenMenuProbe(windowList: windows)
         let proxy = ClickProxy(
             executor: executor, poster: poster, locator: locator, separator: OwnItems.separatorID,

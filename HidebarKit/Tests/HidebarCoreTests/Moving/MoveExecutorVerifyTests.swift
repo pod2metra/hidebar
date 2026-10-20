@@ -31,7 +31,8 @@ import Testing
         _ steps: [MoveStep], locator: (any ItemLocating)? = nil, confirmed: inout Int
     ) -> MovePlanResult {
         var count = 0
-        let executor = MoveExecutor(poster: bar, locator: locator ?? bar, clock: bar, inputGate: gate)
+        let executor = MoveExecutor(
+            poster: bar, locator: locator ?? bar, windows: bar, clock: bar, inputGate: gate)
         let result = executor.execute(steps, confirming: layout) { _ in count += 1 }
         confirmed = count
         return result
@@ -111,8 +112,8 @@ import Testing
     @Test func anItemThatCannotBeReadAtTheEndFailsThePlan() {
         land("item", at: 75, onWait: 1)
         let locator = ScriptedLocator(bar)
-        // Reads: item, anchor, one poll, then the check starts with the item.
-        locator.transform = { count, frame in count == 4 ? nil : frame }
+        // Reads: item, one poll, then the check starts with the item.
+        locator.transform = { count, frame in count == 3 ? nil : frame }
         var confirmed = 0
 
         let result = run([step(.rightOf)], locator: locator, confirmed: &confirmed)
@@ -124,7 +125,8 @@ import Testing
     @Test func anAnchorThatCannotBeReadAtTheEndFailsThePlan() {
         land("item", at: 75, onWait: 1)
         let locator = ScriptedLocator(bar)
-        locator.transform = { count, frame in count == 5 ? nil : frame }
+        // Reads: item, one poll, then the check reads the item and the anchor.
+        locator.transform = { count, frame in count == 4 ? nil : frame }
         var confirmed = 0
 
         let result = run([step(.rightOf)], locator: locator, confirmed: &confirmed)

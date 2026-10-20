@@ -16,9 +16,11 @@ public struct AXMenuBarEntry: Equatable, Sendable {
 /// Walks every app's `AXExtrasMenuBar` and lists its items. Without the Accessibility permission
 /// the tree answers nothing and the list is empty.
 public struct AXMenuBarReader<Tree: AXTreeReading>: Sendable {
-    /// Tried in order; the first non-empty value is the item's title. Image-only items usually
-    /// carry their name in the description.
-    static var titleAttributes: [String] { ["AXTitle", "AXDescription"] }
+    /// Tried in order; the first non-empty value is the item's title. Control Center's items have
+    /// a stable, unlocalized `AXIdentifier` ("com.apple.menuextra.wifi") and a localized
+    /// description that changes with the state. Image-only items usually carry their name in the
+    /// description.
+    static var titleAttributes: [String] { ["AXIdentifier", "AXTitle", "AXDescription"] }
 
     private let tree: Tree
     private let bundleIDOfPID: @Sendable (Int) -> String?

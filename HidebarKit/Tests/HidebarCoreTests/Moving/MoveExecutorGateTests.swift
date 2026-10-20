@@ -7,7 +7,7 @@ private struct PersistError: Error {}
 /// Poster, locator and clock in one: records whether the gate was closed at every call and moves
 /// the item on the first wait, so a move succeeds.
 @MainActor
-private final class GateProbe: EventPosting, ItemLocating, MoveClock {
+private final class GateProbe: EventPosting, ItemLocating, WindowLocating, MoveClock {
     let gate: InputGate
     private(set) var samples: [Bool] = []
     private var frames: [MenuBarItemID: ItemFrame] = [
@@ -21,9 +21,14 @@ private final class GateProbe: EventPosting, ItemLocating, MoveClock {
 
     func cursorPosition() -> CursorPoint { sample(); return CursorPoint(x: 0, y: 0) }
     func setCursorPosition(_ point: CursorPoint) { sample() }
-    func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool { sample(); return true }
+    func postCommandDrag(_ drag: CommandDrag) -> Bool { sample(); return true }
     func postClick(at point: CursorPoint) -> Bool { sample(); return true }
     func frame(of id: MenuBarItemID) -> ItemFrame? { sample(); return frames[id] }
+
+    func window(of id: MenuBarItemID) -> WindowTarget? {
+        sample()
+        return frames[id].map { WindowTarget(windowID: 1, ownerPID: 688, frame: $0) }
+    }
 
     func wait(milliseconds: Int) {
         sample()
@@ -38,7 +43,8 @@ private final class GateProbe: EventPosting, ItemLocating, MoveClock {
 
     init() {
         probe = GateProbe(gate: gate)
-        executor = MoveExecutor(poster: probe, locator: probe, clock: probe, inputGate: gate)
+        executor = MoveExecutor(
+            poster: probe, locator: probe, windows: probe, clock: probe, inputGate: gate)
     }
 
     private func step(movable: Bool = true) -> MoveStep {

@@ -29,15 +29,18 @@ public final class OverflowStripViewModel {
     }
 
     private let snapshotter: any Snapshotting
+    private let names: ItemNames
     private let clickIcon: @MainActor (MenuBarItemID) -> ClickOutcome
     private var generation = 0
 
     /// `click` is how an icon gets clicked; the app passes `AppComposition.click`, so every click
     /// from the strip is made with the separator revealed and the icon put back afterwards.
     public init(
-        snapshotter: any Snapshotting, click: @escaping @MainActor (MenuBarItemID) -> ClickOutcome
+        snapshotter: any Snapshotting, names: ItemNames,
+        click: @escaping @MainActor (MenuBarItemID) -> ClickOutcome
     ) {
         self.snapshotter = snapshotter
+        self.names = names
         self.clickIcon = click
     }
 
@@ -57,7 +60,7 @@ public final class OverflowStripViewModel {
         scrollModel = ScrollModel(
             contentWidth: Self.contentWidth(itemWidths, spacing: spacing), viewportWidth: viewportWidth,
             offset: scrollModel.offset)
-        rows = strip.map { Self.row(for: $0, capabilities: capabilities) }
+        rows = strip.map { Self.row(for: $0, named: names.name(of: $0.item.id), capabilities: capabilities) }
         guard capabilities.panelPresentation == .snapshots else { return }
         await loadSnapshots(for: strip, generation: mine)
     }
@@ -110,10 +113,11 @@ public final class OverflowStripViewModel {
         max(0, widths.reduce(0) { $0 + $1 + spacing } - spacing)
     }
 
-    private static func row(for found: DiscoveredItem, capabilities: Capabilities) -> GroupPanelRow {
-        let id = found.item.id
-        return GroupPanelRow(
-            id: id, name: id.title.isEmpty ? id.ownerBundleID : id.title, content: .appName,
+    private static func row(
+        for found: DiscoveredItem, named name: String, capabilities: Capabilities
+    ) -> GroupPanelRow {
+        GroupPanelRow(
+            id: found.item.id, name: name, content: .appName,
             isClickable: capabilities.canMove && found.isManaged && found.item.isMovable)
     }
 }

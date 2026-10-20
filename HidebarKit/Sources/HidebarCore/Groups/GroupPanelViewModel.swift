@@ -24,10 +24,12 @@ public final class GroupPanelViewModel {
     public var isEmpty: Bool { rows.isEmpty }
 
     private let snapshotter: any Snapshotting
+    private let names: ItemNames
     private var generation = 0
 
-    public init(snapshotter: any Snapshotting) {
+    public init(snapshotter: any Snapshotting, names: ItemNames) {
         self.snapshotter = snapshotter
+        self.names = names
     }
 
     /// Rebuilds the rows at once, then upgrades them to snapshots one by one.
@@ -38,7 +40,9 @@ public final class GroupPanelViewModel {
         generation += 1
         let mine = generation
         let matches = group.items.map { Self.match($0, in: items, capabilities: capabilities) }
-        rows = zip(group.items, matches).map { Self.row(for: $0, match: $1, capabilities: capabilities) }
+        rows = zip(group.items, matches).map {
+            Self.row(for: $0, named: names.name(of: $0), match: $1, capabilities: capabilities)
+        }
         guard capabilities.panelPresentation == .snapshots else { return }
         await loadSnapshots(for: matches, generation: mine)
     }
@@ -60,9 +64,8 @@ public final class GroupPanelViewModel {
     }
 
     private static func row(
-        for id: MenuBarItemID, match: DiscoveredItem?, capabilities: Capabilities
+        for id: MenuBarItemID, named name: String, match: DiscoveredItem?, capabilities: Capabilities
     ) -> GroupPanelRow {
-        let name = id.displayName
         guard capabilities.canIdentifyOwners else {
             return GroupPanelRow(id: id, name: name, content: .appName, isClickable: false)
         }

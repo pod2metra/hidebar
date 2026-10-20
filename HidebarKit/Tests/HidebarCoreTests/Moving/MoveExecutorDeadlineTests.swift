@@ -10,7 +10,8 @@ import Testing
 
     init() {
         gate = InputGate(maxSuppressionMilliseconds: 1000, uptime: bar.uptime.reader)
-        executor = MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
+        executor = MoveExecutor(
+            poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate)
         bar.frames[moveID("item")] = ItemFrame(x: 100, y: 0, width: 10, height: 20)
         bar.frames[moveID("other")] = ItemFrame(x: 200, y: 0, width: 10, height: 20)
         bar.frames[moveID("anchor")] = ItemFrame(x: 50, y: 0, width: 20, height: 20)
@@ -29,24 +30,35 @@ import Testing
 
         #expect(executor.move(step()) == .failed)
 
-        // Attempt 1 reads two frames (600), polls once (925), polls again (1250); the third poll
+        // Attempt 1 reads one frame (300) and polls three times (625, 950, 1275); the fourth poll
         // and a second attempt are refused.
         #expect(bar.downs.count == 1)
-        #expect(bar.waits == 2)
+        #expect(bar.waits == 3)
         #expect(bar.restores == [bar.cursor])
         #expect(!gate.suppressUserInput)
         #expect(!gate.isOverdue)
     }
 
     @Test func noDragIsPostedWhenTheReadsBeforeItOutlastedTheGate() {
-        bar.readCost = 600
+        bar.readCost = 1100
 
         #expect(executor.move(step()) == .failed)
 
-        // The gate was fresh when the attempt began; the two reads used it up.
+        // The gate was fresh when the attempt began; the read used it up. Nothing was touched.
         #expect(bar.downs.isEmpty)
         #expect(bar.waits == 0)
-        #expect(bar.restores == [bar.cursor])
+        #expect(bar.restores.isEmpty)
+        #expect(!gate.suppressUserInput)
+    }
+
+    @Test func waitingForAWindowStopsOnceTheGateIsOverdue() {
+        bar.windowless = [moveID("anchor")]
+        bar.onWait = { [bar] _ in bar.uptime.advance(by: 5000) }
+
+        #expect(executor.move(step()) == .failed)
+
+        #expect(bar.waits == 1)
+        #expect(bar.downs.isEmpty)
         #expect(!gate.suppressUserInput)
     }
 

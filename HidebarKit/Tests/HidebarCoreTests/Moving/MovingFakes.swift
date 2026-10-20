@@ -11,7 +11,7 @@ enum MoveEvent: Equatable {
 /// One object playing poster, locator and clock, so a test sees the events in the order they happened.
 /// Posting an event warps the cursor to its point, like a real posted event does.
 @MainActor
-final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
+final class MoveFakeBar: EventPosting, ItemLocating, WindowLocating, MoveClock {
     var frames: [MenuBarItemID: ItemFrame] = [:]
     var cursor = CursorPoint(x: 900, y: 500)
     private(set) var log: [MoveEvent] = []
@@ -33,17 +33,42 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     /// When set, a drag lands on the next wait like a real drop: the item whose centre was pressed
     /// ends up centred on the release point. Without it only scripted frames ever change.
     var dragsLand = false
-    private var pendingDrag: (start: CursorPoint, end: CursorPoint)?
+    private var pendingDrag: CommandDrag?
+    /// How much narrower a window is than the item's frame on each side (1 on macOS 26).
+    var windowInset = 0.0
+    private(set) var drags: [CommandDrag] = []
+    private var windowIDs: [MenuBarItemID: Int] = [:]
+
+    /// A stable window number per item, handed out in the order items are first asked about.
+    private func windowID(of id: MenuBarItemID) -> Int {
+        let known = windowIDs[id] ?? 100 + windowIDs.count
+        windowIDs[id] = known
+        return known
+    }
+
+    /// Items that have a frame but no window the window server can name.
+    var windowless: Set<MenuBarItemID> = []
+
+    func window(of id: MenuBarItemID) -> WindowTarget? {
+        guard !windowless.contains(id) else { return nil }
+        return frames[id].map { frame in
+            WindowTarget(
+                windowID: windowID(of: id), ownerPID: 688,
+                frame: ItemFrame(
+                    x: frame.x + windowInset, y: frame.y, width: frame.width - 2 * windowInset,
+                    height: frame.height))
+        }
+    }
 
     private func landPendingDrag() {
         guard let drag = pendingDrag else { return }
         pendingDrag = nil
-        guard let pressed = frames.first(where: { $0.value.x + $0.value.width / 2 == drag.start.x }) else {
+        guard let pressed = frames.first(where: { windowID(of: $0.key) == drag.item.windowID }) else {
             return
         }
         frames[pressed.key] = ItemFrame(
-            x: drag.end.x - pressed.value.width / 2, y: pressed.value.y, width: pressed.value.width,
-            height: pressed.value.height)
+            x: drag.release.x - pressed.value.width / 2, y: pressed.value.y,
+            width: pressed.value.width, height: pressed.value.height)
     }
 
     private func sample() {
@@ -69,18 +94,19 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
         log.append(.setCursor(point))
     }
 
-    func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool {
+    func postCommandDrag(_ drag: CommandDrag) -> Bool {
         guard dragPosts else {
             sample()
             return false
         }
         sample()
-        cursor = start
-        log.append(.down(start))
+        cursor = CommandDrag.pressPoint
+        log.append(.down(CommandDrag.pressPoint))
         sample()
-        cursor = end
-        log.append(.up(end))
-        pendingDrag = dragsLand ? (start, end) : nil
+        cursor = drag.release
+        log.append(.up(drag.release))
+        drags.append(drag)
+        pendingDrag = dragsLand ? drag : nil
         return true
     }
 

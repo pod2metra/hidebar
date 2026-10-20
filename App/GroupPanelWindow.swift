@@ -25,8 +25,8 @@ final class GroupPanelWindow: NSObject, NSWindowDelegate {
     private let stack = NSStackView()
     private let emptyLabel = NSTextField(labelWithString: "No icons in this group")
 
-    init(snapshotter: any Snapshotting) {
-        viewModel = GroupPanelViewModel(snapshotter: snapshotter)
+    init(snapshotter: any Snapshotting, names: ItemNames) {
+        viewModel = GroupPanelViewModel(snapshotter: snapshotter, names: names)
         super.init()
         stack.orientation = .vertical
         stack.alignment = .leading

@@ -10,7 +10,11 @@ import Testing
     private let screenRecordingOnly = PermissionsState(accessibility: false, screenRecording: true).capabilities
     private let none = PermissionsState(accessibility: false, screenRecording: false).capabilities
 
-    private var viewModel: GroupPanelViewModel { GroupPanelViewModel(snapshotter: snapshotter) }
+    private var viewModel: GroupPanelViewModel {
+        GroupPanelViewModel(
+            snapshotter: snapshotter,
+            names: ItemNames(apps: StubAppNames(names: ["com.example.app": "Example"])))
+    }
 
     private func group(_ names: String...) -> ItemGroup {
         ItemGroup(id: UUID(), symbol: try! GroupSymbol(name: "star"), items: names.map(moveID))
@@ -120,14 +124,14 @@ import Testing
         #expect(snapshotter.requested == [11, 22])
     }
 
-    @Test func rowNameIsTheTitleOrTheBundleIdWhenThereIsNone() async {
+    @Test func rowNameIsTheAppNameWithTheTitleOrTheBundleIdOfAnUnknownApp() async {
         let titled = MenuBarItemID(ownerBundleID: "com.example.app", title: "Sync")
         let untitled = MenuBarItemID(ownerBundleID: "com.example.other", title: "")
         let model = viewModel
         await model.refresh(
             group: ItemGroup(id: UUID(), symbol: try! GroupSymbol(name: "star"), items: [titled, untitled]),
             items: [], capabilities: none)
-        #expect(model.rows.map(\.name) == ["Sync", "com.example.other"])
+        #expect(model.rows.map(\.name) == ["Example — Sync", "com.example.other"])
     }
 
     @Test func emptyGroupIsTheEmptyState() async {

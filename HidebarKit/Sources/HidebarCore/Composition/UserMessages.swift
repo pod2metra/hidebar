@@ -1,11 +1,11 @@
 /// The sentences the app shows when something did not work out, so the windows only display them.
 public enum UserMessages {
-    public static func text(for failure: ApplyFailure) -> String {
+    public static func text(for failure: ApplyFailure, names: ItemNames) -> String {
         switch failure {
         case .separatorUnavailable:
             "The Hidebar separator is not on the menu bar or cannot be moved, so the icons were not arranged. Grant Accessibility access and try again."
         case .moveStopped(let index, let item, let outcome):
-            "Step \(index + 1) failed: \(item.displayName) \(text(for: outcome)). Nothing was saved."
+            "Step \(index + 1) failed: \(names.name(of: item)) \(text(for: outcome)). Nothing was saved."
         case .storeRefused(let error):
             text(for: error)
         case .storeFailed(let reason):
@@ -65,12 +65,12 @@ public enum UserMessages {
     }
 
     /// For a rejected edit of the draft, such as a drop that is not allowed.
-    public static func text(forEditError error: any Error) -> String {
+    public static func text(forEditError error: any Error, names: ItemNames) -> String {
         guard let edit = error as? LayoutEditError else { return "The change was rejected: \(error)" }
         switch edit {
         case .unknownItem: return "That icon is no longer in the layout."
         case .unknownGroup: return "That group no longer exists."
-        case .notHidable(let id): return "\(id.displayName) must stay on the menu bar."
+        case .notHidable(let id): return "\(names.name(of: id)) must stay on the menu bar."
         case .indexOutOfRange: return "The icon cannot be dropped there."
         }
     }

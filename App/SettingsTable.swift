@@ -16,12 +16,18 @@ final class SettingsTable: NSObject, NSTableViewDataSource, NSTableViewDelegate 
     private static let dragType = NSPasteboard.PasteboardType("app.hidebar.settings-row")
 
     private let model: SettingsViewModel
+    private let names: ItemNames
+    /// System items: listed as they are on the bar, but not draggable. Read once, as it needs a
+    /// pass over the bar and does not change while the window is open.
+    private let fixed: Set<MenuBarItemID>
     private var rows: SettingsRows
     /// `canDrop` reads the bar, so each placement is asked once per drag.
     private var dropAnswers: [Placement: Bool] = [:]
 
-    init(model: SettingsViewModel) {
+    init(model: SettingsViewModel, names: ItemNames) {
         self.model = model
+        self.names = names
+        fixed = model.fixedItems
         rows = SettingsRows(sections: model.sections)
         super.init()
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("main"))
@@ -74,7 +80,10 @@ final class SettingsTable: NSObject, NSTableViewDataSource, NSTableViewDelegate 
 
     private func itemView(_ id: MenuBarItemID) -> NSView {
         let icon = NSImageView(image: AppIcons.image(bundleID: id.ownerBundleID))
-        let label = NSTextField(labelWithString: id.displayName)
+        let isFixed = fixed.contains(id)
+        let label = NSTextField(labelWithString: names.name(of: id) + (isFixed ? " (fixed)" : ""))
+        label.textColor = isFixed ? .secondaryLabelColor : .labelColor
+        label.toolTip = isFixed ? "A system item: macOS does not let it be moved." : nil
         let stack = NSStackView(views: [icon, label])
         stack.edgeInsets = NSEdgeInsets(top: 0, left: 18, bottom: 0, right: 0)
         stack.spacing = 6
@@ -92,7 +101,7 @@ final class SettingsTable: NSObject, NSTableViewDataSource, NSTableViewDelegate 
     // MARK: drag and drop
 
     func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> (any NSPasteboardWriting)? {
-        guard rows.item(atRow: row) != nil else { return nil }
+        guard let dragged = rows.item(atRow: row), !fixed.contains(dragged) else { return nil }
         let item = NSPasteboardItem()
         item.setString(String(row), forType: Self.dragType)
         return item

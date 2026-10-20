@@ -68,7 +68,7 @@ import Testing
     @Test func aClickFromTheOverflowStripRevealsTheSeparatorLikeAnyOtherClick() async {
         let composition = composition
         let strip = OverflowStripViewModel(
-            snapshotter: FakeSnapshotter(), click: { composition.click($0) })
+            snapshotter: FakeSnapshotter(), names: unknownApps, click: { composition.click($0) })
         // Room for two of the three 10-wide icons: `a` is left over.
         let screen = OverflowCalculator(
             screenWidth: 25, notchRightArea: nil, menusWidth: 0, spacing: 0)

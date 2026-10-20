@@ -24,7 +24,8 @@ import Testing
 
     private func proxy(timeout: TimeInterval = 10, maxDisplacement: TimeInterval = 120) -> ClickProxy {
         ClickProxy(
-            executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate),
+            executor: MoveExecutor(
+                poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate),
             poster: bar, locator: bar, separator: moveID("sep"), revealSide: .rightOf, clock: timer,
             inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() }, restoreTimeout: timeout,
             maxDisplacement: maxDisplacement)

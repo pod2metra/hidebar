@@ -9,7 +9,7 @@ private struct PersistError: Error, Equatable {}
     private let savedCursor = CursorPoint(x: 900, y: 500)
 
     private var executor: MoveExecutor {
-        MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: InputGate())
+        MoveExecutor(poster: bar, locator: bar, windows: bar, clock: bar, inputGate: InputGate())
     }
 
     /// Item at x 100..110, anchor at x 50..70, both 20 high: centre of the item is (105, 10).
@@ -33,13 +33,13 @@ private struct PersistError: Error, Equatable {}
         }
     }
 
-    @Test func dragPressesOnItemCentreReleasesAtAnchorRightEdgeAndRestoresCursor() {
+    @Test func dragPressesFarAwayReleasesAtAnchorRightEdgeAndRestoresCursor() {
         scene()
         moveOnWait(1)
         #expect(executor.move(step()) == .moved)
         #expect(
             bar.log == [
-                .down(CursorPoint(x: 105, y: 10)), .up(CursorPoint(x: 70, y: 10)), .wait(25),
+                .down(CursorPoint(x: 20_000, y: 20_000)), .up(CursorPoint(x: 70, y: 10)), .wait(25),
                 .setCursor(savedCursor),
             ])
         #expect(bar.cursor == savedCursor)
@@ -50,6 +50,79 @@ private struct PersistError: Error, Equatable {}
         moveOnWait(1)
         #expect(executor.move(step(.leftOf)) == .moved)
         #expect(bar.ups == [CursorPoint(x: 50, y: 10)])
+    }
+
+    @Test func dragNamesTheWindowOfTheItemAndOfTheAnchor() {
+        scene()
+        moveOnWait(1)
+        #expect(executor.move(step()) == .moved)
+        #expect(
+            bar.drags == [
+                CommandDrag(
+                    item: WindowTarget(
+                        windowID: 100, ownerPID: 688,
+                        frame: ItemFrame(x: 100, y: 0, width: 10, height: 20)),
+                    anchor: WindowTarget(
+                        windowID: 101, ownerPID: 688,
+                        frame: ItemFrame(x: 50, y: 0, width: 20, height: 20)),
+                    side: .rightOf)
+            ])
+    }
+
+    @Test func rightDropFollowsTheAnchorWindowNotItsWiderAccessibilityFrame() {
+        scene()
+        bar.windowInset = 1
+        moveOnWait(1)
+        #expect(executor.move(step()) == .moved)
+        #expect(bar.ups == [CursorPoint(x: 69, y: 10)])
+    }
+
+    @Test func leftDropFollowsTheAnchorWindowNotItsWiderAccessibilityFrame() {
+        scene()
+        bar.windowInset = 1
+        moveOnWait(1)
+        #expect(executor.move(step(.leftOf)) == .moved)
+        #expect(bar.ups == [CursorPoint(x: 51, y: 10)])
+    }
+
+    @Test func itemWithoutAWindowFailsAfterABoundedWaitWithoutAnyEventOrCursorChange() {
+        scene()
+        bar.windowless = [moveID("item")]
+        #expect(executor.move(step()) == .failed)
+        #expect(bar.downs.isEmpty)
+        #expect(bar.ups.isEmpty)
+        #expect(bar.restores.isEmpty)
+        #expect(bar.cursorReads == 0)
+        #expect(bar.waits == 3 * MoveExecutor.windowPollLimit)
+    }
+
+    @Test func anchorWithoutAWindowFailsAfterABoundedWaitWithoutAnyEventOrCursorChange() {
+        scene()
+        bar.windowless = [moveID("anchor")]
+        #expect(executor.move(step()) == .failed)
+        #expect(bar.downs.isEmpty)
+        #expect(bar.cursorReads == 0)
+        #expect(bar.waits == 3 * MoveExecutor.windowPollLimit)
+    }
+
+    @Test func windowThatShowsUpWhileTheBarSettlesIsDraggedWithoutBurningAnAttempt() {
+        scene()
+        bar.windowless = [moveID("anchor")]
+        bar.onWait = { [bar] count in
+            if count == 2 { bar.windowless = [] }
+            if count == 3 { bar.frames[moveID("item")] = ItemFrame(x: 60, y: 0, width: 10, height: 20) }
+        }
+        #expect(executor.move(step()) == .moved)
+        // Two waits for the window, then the first poll after the drag.
+        #expect(bar.waits == 3)
+        #expect(bar.downs.count == 1)
+    }
+
+    @Test func pollsForTheWindowAreSpacedByThePollInterval() {
+        scene()
+        bar.windowless = [moveID("item")]
+        _ = executor.move(step())
+        #expect(bar.log.prefix(2) == [.wait(25), .wait(25)])
     }
 
     @Test func unmovableItemPostsNothingAndTouchesNothing() {
@@ -130,7 +203,8 @@ private struct PersistError: Error, Equatable {}
     @Test func missingAnchorFailsWithoutAnyEventOrCursorChange() {
         place("item", x: 100)
         #expect(executor.move(step()) == .failed)
-        #expect(bar.log.isEmpty)
+        #expect(bar.downs.isEmpty)
+        #expect(bar.restores.isEmpty)
         #expect(bar.cursorReads == 0)
     }
 

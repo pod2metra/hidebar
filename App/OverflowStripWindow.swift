@@ -33,7 +33,8 @@ final class OverflowStripWindow: NSObject {
     init(services: AppServices) {
         self.services = services
         viewModel = OverflowStripViewModel(
-            snapshotter: services.snapshotter, click: services.composition.click)
+            snapshotter: services.snapshotter, names: services.names,
+            click: services.composition.click)
         super.init()
         strip.material = .menu
         strip.state = .active

@@ -29,7 +29,7 @@ import Testing
         movable: Bool = true
     ) -> DiscoveredItem {
         DiscoveredItem(
-            windowID: windowID,
+            windowID: windowID, ownerPID: 688,
             item: MenuBarItem(
                 id: moveID(name), frame: ItemFrame(x: x, y: 0, width: width, height: 20),
                 isMovable: movable, isHidable: movable),
@@ -44,7 +44,10 @@ import Testing
     }
 
     private var viewModel: OverflowStripViewModel {
-        OverflowStripViewModel(snapshotter: snapshotter, click: { [clicks] in clicks.click($0) })
+        OverflowStripViewModel(
+            snapshotter: snapshotter,
+            names: ItemNames(apps: StubAppNames(names: ["com.example.app": "Example"])),
+            click: { [clicks] in clicks.click($0) })
     }
 
     private func recompute(
@@ -111,7 +114,7 @@ import Testing
 
     private func own(_ title: String, x: Double, width: Double) -> DiscoveredItem {
         DiscoveredItem(
-            windowID: 90,
+            windowID: 90, ownerPID: 688,
             item: MenuBarItem(
                 id: MenuBarItemID(ownerBundleID: OwnItems.bundleID, title: title),
                 frame: ItemFrame(x: x, y: 0, width: width, height: 20), isMovable: true, isHidable: true),
@@ -158,16 +161,16 @@ import Testing
 
     // MARK: rows
 
-    @Test func rowNameIsTheTitleOrTheBundleIdWhenThereIsNone() async {
+    @Test func rowNameIsTheAppNameWithTheTitleOrTheBundleIdOfAnUnknownApp() async {
         let titled = DiscoveredItem(
-            windowID: 1,
+            windowID: 1, ownerPID: 688,
             item: MenuBarItem(
                 id: MenuBarItemID(ownerBundleID: "com.example.app", title: "Sync"),
                 frame: ItemFrame(x: 0, y: 0, width: 90, height: 20), isMovable: true, isHidable: true),
             isManaged: true)
         let model = viewModel
         await recompute(model, items: [titled, entry("u", x: 200, width: 90)], capabilities: none)
-        #expect(model.rows.map(\.name) == ["Sync", "test.u"])
+        #expect(model.rows.map(\.name) == ["Example — Sync", "test.u"])
     }
 
     @Test func clickableMeansCanMoveAndManagedAndMovable() async {

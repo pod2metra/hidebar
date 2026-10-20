@@ -12,7 +12,7 @@ public struct WindowInfoParser: Sendable {
         self.bundleIDOfPID = bundleIDOfPID
     }
 
-    /// Entries without a window number, layer or complete bounds are dropped.
+    /// Entries without a window number, layer, owner pid or complete bounds are dropped.
     public func parse(_ raw: [RawWindow]) -> [WindowInfo] {
         raw.compactMap(window)
     }
@@ -20,12 +20,13 @@ public struct WindowInfoParser: Sendable {
     private func window(from raw: RawWindow) -> WindowInfo? {
         guard let id = Self.integer(raw["kCGWindowNumber"]),
             let layer = Self.integer(raw["kCGWindowLayer"]),
-            let frame = Self.frame(raw["kCGWindowBounds"])
+            let frame = Self.frame(raw["kCGWindowBounds"]),
+            let ownerPID = Self.integer(raw["kCGWindowOwnerPID"])
         else { return nil }
         return WindowInfo(
             windowID: id, layer: layer, frame: frame,
-            isOnscreen: raw["kCGWindowIsOnscreen"] as? Bool ?? false,
-            ownerBundleID: Self.integer(raw["kCGWindowOwnerPID"]).flatMap(bundleIDOfPID),
+            isOnscreen: raw["kCGWindowIsOnscreen"] as? Bool ?? false, ownerPID: ownerPID,
+            ownerBundleID: bundleIDOfPID(ownerPID),
             title: raw["kCGWindowName"] as? String ?? "")
     }
 

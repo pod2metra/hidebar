@@ -23,11 +23,6 @@ import Testing
         #expect(decoded == id)
     }
 
-    @Test func displayNameIsTheTitleOrElseTheOwner() {
-        #expect(MenuBarItemID(ownerBundleID: "com.example.app", title: "Status").displayName == "Status")
-        #expect(MenuBarItemID(ownerBundleID: "com.example.app", title: "").displayName == "com.example.app")
-    }
-
     @Test func itemKeepsAllFields() {
         let id = MenuBarItemID(ownerBundleID: "com.example.app", title: "Status")
         let frame = ItemFrame(x: 1, y: 2, width: 3, height: 4)

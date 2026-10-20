@@ -30,7 +30,8 @@ final class CompositionScene {
     private(set) lazy var gate = InputGate(uptime: bar.uptime.reader)
 
     private(set) lazy var proxy = ClickProxy(
-        executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate),
+        executor: MoveExecutor(
+            poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate),
         poster: bar, locator: bar, separator: OwnItems.separatorID, revealSide: .rightOf, clock: timer,
         inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() })
 

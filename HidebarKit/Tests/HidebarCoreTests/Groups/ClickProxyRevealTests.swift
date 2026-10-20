@@ -19,7 +19,8 @@ import Testing
 
     private func proxy(revealSide: DropSide = .rightOf) -> ClickProxy {
         ClickProxy(
-            executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate),
+            executor: MoveExecutor(
+                poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate),
             poster: bar, locator: bar, separator: moveID("sep"), revealSide: revealSide, clock: timer,
             inputGate: gate, isMenuOpen: { false })
     }
@@ -51,7 +52,7 @@ import Testing
 
         #expect(proxy.click(moveID("a"), among: items) == .clicked)
 
-        #expect(bar.downs == [CursorPoint(x: 35, y: 10)])
+        #expect(bar.downs == [CommandDrag.pressPoint])
         #expect(bar.ups == [CursorPoint(x: 60, y: 10)])
         #expect(bar.clicks == [CursorPoint(x: 60, y: 10)])
     }

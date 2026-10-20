@@ -73,6 +73,12 @@ public final class SettingsViewModel {
         placement == .visible || canHide(item)
     }
 
+    /// Items on the bar now that must not be dragged (system items). The window lists them, as
+    /// they are on the bar, but offers no way to drag them.
+    public var fixedItems: Set<MenuBarItemID> {
+        Set(barItems().filter { !$0.isMovable }.map(\.id))
+    }
+
     private var nonHidable: Set<MenuBarItemID> {
         Set(barItems().filter { !$0.isHidable }.map(\.id))
     }

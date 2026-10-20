@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import HidebarCore
 
 /// Posts real mouse events. Every event carries `InputGate.syntheticEventTag`, so the input
@@ -17,20 +18,12 @@ public struct CGEventPoster: EventPosting {
     }
 
     /// Nothing is posted unless both halves of the drag could be created.
-    public func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool {
+    public func postCommandDrag(_ drag: CommandDrag) -> Bool {
+        LocalEventFilter.permitAll()
         let events = [
-            event(.leftMouseDown, at: start, flags: .maskCommand),
-            event(.leftMouseUp, at: end, flags: .maskCommand),
+            event(.leftMouseDown, at: CommandDrag.pressPoint, aimedAt: drag.item, to: drag.item),
+            event(.leftMouseUp, at: drag.release, aimedAt: drag.anchor, to: drag.item),
         ]
-        return AllOrNothing.deliver(events) { $0.post(tap: .cghidEventTap) }
-    }
-
-    func event(_ type: CGEventType, at point: CursorPoint, flags: CGEventFlags) -> CGEvent? {
-        let event = CGEvent(
-            mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
-            mouseCursorPosition: CGPoint(x: point.x, y: point.y), mouseButton: .left)
-        event?.flags = flags
-        event?.setIntegerValueField(.eventSourceUserData, value: InputGate.syntheticEventTag)
-        return event
+        return AllOrNothing.deliver(events, using: send)
     }
 }

@@ -29,20 +29,90 @@ private final class MutableWindowList: WindowListProvider {
         #expect(resolver.owner(ofWindow: 5) == alpha)
     }
 
-    @Test func matchingToleratesLessThanOnePointFiveOnXAndWidth() {
-        let near = MutableWindowList([window(1, x: 101.4, width: 47.4), window(2, x: 98.6, width: 44.6)])
+    /// Measured on macOS 26: an item's AX frame is one point wider on each side than its window
+    /// (AX x 2339 width 28, window x 2340 width 26), so the centres agree and the widths do not.
+    @Test func anAXFrameOnePointWiderOnEachSideMatches() {
+        let list = MutableWindowList([window(1, x: 101, width: 44)])
+        let (resolver, _) = make(list, apps: oneItem)
+        #expect(resolver.owner(ofWindow: 1) == alpha)
+    }
+
+    @Test func matchingToleratesLessThanOnePointFiveOnTheCentre() {
+        let near = MutableWindowList([window(1, x: 101.4), window(2, x: 98.6)])
         let (resolver, _) = make(near, apps: oneItem)
         #expect(resolver.owner(ofWindow: 1) == alpha)
         #expect(resolver.owner(ofWindow: 2) == alpha)
     }
 
-    @Test func aDifferenceOfOnePointFiveOrMoreDoesNotMatch() {
+    @Test func matchingToleratesLessThanFourOnTheWidth() {
+        let near = MutableWindowList([
+            window(1, x: 98.05, width: 49.9), window(2, x: 101.95, width: 42.1),
+        ])
+        let (resolver, _) = make(near, apps: oneItem)
+        #expect(resolver.owner(ofWindow: 1) == alpha)
+        #expect(resolver.owner(ofWindow: 2) == alpha)
+    }
+
+    @Test func aCentreOffByOnePointFiveOrAnAXFrameFourWiderThanTheWindowDoesNotMatch() {
         let far = MutableWindowList([
-            window(1, x: 101.5), window(2, x: 98.5), window(3, x: 100, width: 47.5),
-            window(4, x: 100, width: 44.5),
+            window(1, x: 101.5), window(2, x: 98.5), window(4, x: 102, width: 42),
         ])
         let (resolver, _) = make(far, apps: oneItem)
-        #expect([1, 2, 3, 4].allSatisfy { resolver.owner(ofWindow: $0) == nil })
+        #expect([1, 2, 4].allSatisfy { resolver.owner(ofWindow: $0) == nil })
+    }
+
+    // MARK: system items (rows measured on macOS 26)
+
+    /// The window of a system item is ten points wider than its AX frame on each side, the centres
+    /// agree: Wi-Fi AX 1306/22 against window 1296/42.
+    private func systemBar() -> AXOwnerResolver<FakeAXTree> {
+        let rows: [(pid: Int, ax: ItemFrame, title: String)] = [
+            (10, axFrame(1270, width: 16), "Bluetooth"), (10, axFrame(1306, width: 22), "Wi-Fi"),
+            (10, axFrame(1348, width: 26), "Battery"), (10, axFrame(1622, width: 97.5), "Clock"),
+        ]
+        let items = rows.map { FakeAXItem(pid: $0.pid, frame: $0.ax, title: $0.title) }
+        let list = MutableWindowList([
+            window(1, x: 1260, width: 36), window(2, x: 1296, width: 42),
+            window(3, x: 1338, width: 46), window(4, x: 1612, width: 118),
+        ])
+        return make(list, apps: [FakeAXApp(items: items)]).0
+    }
+
+    @Test func aSystemItemsWindowTenPointsWiderOnEachSideMatchesItsNarrowerAXFrame() {
+        let resolver = systemBar()
+        let titles = [1, 2, 3, 4].map { resolver.owner(ofWindow: $0)?.title }
+        #expect(titles == ["Bluetooth", "Wi-Fi", "Battery", "Clock"])
+    }
+
+    @Test func aNarrowAXFrameDoesNotMatchTheWindowOfItsNeighbour() {
+        let wifi = [FakeAXApp(items: [FakeAXItem(frame: axFrame(1306, width: 22), title: "Wi-Fi")])]
+        let neighbours = MutableWindowList([
+            window(1, x: 1260, width: 36), window(2, x: 1338, width: 46),
+        ])
+        let (resolver, _) = make(neighbours, apps: wifi)
+        #expect(resolver.owner(ofWindow: 1) == nil)
+        #expect(resolver.owner(ofWindow: 2) == nil)
+    }
+
+    @Test func aHiddenModuleWithAnEmptyFrameMatchesNothing() {
+        let hidden = [
+            FakeAXApp(items: [FakeAXItem(frame: ItemFrame(x: 0, y: 0, width: 0, height: 0))])
+        ]
+        let list = MutableWindowList([window(1, x: -20, width: 40), window(2, x: -2, width: 4)])
+        let (resolver, _) = make(list, apps: hidden)
+        #expect(resolver.owner(ofWindow: 1) == nil)
+        #expect(resolver.owner(ofWindow: 2) == nil)
+    }
+
+    @Test func aNarrowAXFrameInsideAWindowThatAnotherItemAlsoFitsStaysAmbiguous() {
+        let apps = [
+            FakeAXApp(items: [
+                FakeAXItem(pid: 10, frame: axFrame(1306, width: 22), title: "A"),
+                FakeAXItem(pid: 20, frame: axFrame(1300, width: 34), title: "B"),
+            ])
+        ]
+        let (resolver, _) = make(MutableWindowList([window(1, x: 1296, width: 42)]), apps: apps)
+        #expect(resolver.owner(ofWindow: 1) == nil)
     }
 
     @Test func eachWindowGetsTheOwnerOfItsOwnItem() {

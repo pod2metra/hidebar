@@ -30,7 +30,8 @@ import Testing
             parser.parse([raw()]) == [
                 WindowInfo(
                     windowID: 21, layer: 25, frame: ItemFrame(x: 1566, y: 0, width: 46, height: 24),
-                    isOnscreen: true, ownerBundleID: "com.apple.controlcenter", title: "Clock")
+                    isOnscreen: true, ownerPID: 629, ownerBundleID: "com.apple.controlcenter",
+                    title: "Clock")
             ])
     }
 
@@ -79,11 +80,15 @@ import Testing
         #expect(parser.parse([raw(without: "kCGWindowName")]).first?.title == "")
     }
 
-    @Test func ownerBundleIDIsNilWhenThePidIsUnknownOrMissing() {
+    @Test func ownerBundleIDIsNilWhenThePidIsUnknown() {
         var stranger = raw()
         stranger["kCGWindowOwnerPID"] = NSNumber(value: 1)
         #expect(parser.parse([stranger]).first?.ownerBundleID == nil)
-        #expect(parser.parse([raw(without: "kCGWindowOwnerPID")]).first?.ownerBundleID == nil)
+        #expect(parser.parse([stranger]).first?.ownerPID == 1)
+    }
+
+    @Test func entryWithoutAnOwnerPidIsDropped() {
+        #expect(parser.parse([raw(without: "kCGWindowOwnerPID")]).isEmpty)
     }
 
     @Test func orderIsKeptAndBadEntriesAreSkippedBetweenGoodOnes() {

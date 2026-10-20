@@ -4,6 +4,7 @@ public struct WindowInfo: Equatable, Sendable {
     public let layer: Int
     public let frame: ItemFrame
     public let isOnscreen: Bool
+    public let ownerPID: Int
     /// Bundle identifier of the window's owning process; `nil` when it has none. On macOS 26 this
     /// is Control Center for every status item, so it does not identify the real owner.
     public let ownerBundleID: String?
@@ -12,12 +13,13 @@ public struct WindowInfo: Equatable, Sendable {
 
     public init(
         windowID: Int, layer: Int, frame: ItemFrame, isOnscreen: Bool,
-        ownerBundleID: String?, title: String
+        ownerPID: Int, ownerBundleID: String?, title: String
     ) {
         self.windowID = windowID
         self.layer = layer
         self.frame = frame
         self.isOnscreen = isOnscreen
+        self.ownerPID = ownerPID
         self.ownerBundleID = ownerBundleID
         self.title = title
     }

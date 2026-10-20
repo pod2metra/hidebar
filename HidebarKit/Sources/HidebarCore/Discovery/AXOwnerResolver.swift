@@ -9,8 +9,13 @@ import Synchronization
 /// entries are therefore kept while the window list stays exactly the same; an empty read is not
 /// kept, so granting Accessibility takes effect at once.
 public final class AXOwnerResolver<Tree: AXTreeReading>: ItemOwnerResolving {
-    /// Largest difference in points between a window's and an item's x and width that still matches.
-    static var frameTolerance: Double { 1.5 }
+    /// Largest difference in points between a window's and an item's horizontal centre that still
+    /// matches.
+    static var centreTolerance: Double { 1.5 }
+    /// How much wider than its window an item's AX frame may be and still match. An app's item is
+    /// one point wider on each side; a system item (Wi-Fi, the clock) is ten points narrower on
+    /// each side, which fits without a lower bound.
+    static var widthTolerance: Double { 4 }
 
     private struct Snapshot {
         let windows: [WindowInfo]
@@ -45,7 +50,11 @@ public final class AXOwnerResolver<Tree: AXTreeReading>: ItemOwnerResolving {
         }
     }
 
+    /// Hidden Control Center modules are listed with an empty frame at the origin; they are not
+    /// on the bar and match no window.
     private static func matches(_ item: ItemFrame, _ window: ItemFrame) -> Bool {
-        abs(item.x - window.x) < frameTolerance && abs(item.width - window.width) < frameTolerance
+        item.width > 0
+            && abs((item.x + item.width / 2) - (window.x + window.width / 2)) < centreTolerance
+            && item.width - window.width < widthTolerance
     }
 }

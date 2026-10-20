@@ -4,6 +4,7 @@ import Testing
 
 @Suite struct UserMessagesTests {
     private let item = MenuBarItemID(ownerBundleID: "com.example.app", title: "Status")
+    private let names = ItemNames(apps: StubAppNames(names: ["com.example.app": "Example"]))
 
     @Test func refusedApplyExplainsThatNothingWasMovedOrSaved() {
         let text = UserMessages.text(for: ApplyRefusal.displacedIconPending)
@@ -11,15 +12,17 @@ import Testing
     }
 
     @Test func separatorUnavailableAsksForAccessibility() {
-        let text = UserMessages.text(for: ApplyFailure.separatorUnavailable)
+        let text = UserMessages.text(for: ApplyFailure.separatorUnavailable, names: names)
         #expect(text.contains("separator"))
         #expect(text.contains("Accessibility"))
     }
 
     @Test func stoppedMoveNamesTheStepTheIconAndWhatHappened() {
-        let text = UserMessages.text(for: .moveStopped(stepIndex: 1, item: item, outcome: .failed))
+        let text = UserMessages.text(
+            for: .moveStopped(stepIndex: 1, item: item, outcome: .failed), names: names)
         #expect(text.contains("Step 2"))
-        #expect(text.contains("Status"))
+        #expect(text.contains("Example — Status"))
+        #expect(!text.contains("com.example.app"))
         #expect(text.contains("did not end up in place"))
         #expect(text.contains("Nothing was saved"))
     }
@@ -48,7 +51,7 @@ import Testing
         for error in [
             LayoutStoreError.unsupportedVersion(7), .refusingToOverwriteNewerVersion(7),
         ] {
-            let text = UserMessages.text(for: ApplyFailure.storeRefused(error))
+            let text = UserMessages.text(for: ApplyFailure.storeRefused(error), names: names)
             #expect(text == UserMessages.text(for: error))
             #expect(text.contains("version 7"))
             #expect(text.contains("nothing will be saved"))
@@ -56,18 +59,19 @@ import Testing
     }
 
     @Test func failedStoreCarriesItsReason() {
-        #expect(UserMessages.text(for: .storeFailed("disk full")).contains("disk full"))
+        #expect(UserMessages.text(for: .storeFailed("disk full"), names: names).contains("disk full"))
     }
 
     @Test func rejectedEditsExplainThemselves() {
-        #expect(UserMessages.text(forEditError: LayoutEditError.notHidable(item)).contains("Status must stay"))
-        #expect(UserMessages.text(forEditError: LayoutEditError.unknownItem(item)).contains("icon"))
-        #expect(UserMessages.text(forEditError: LayoutEditError.unknownGroup(.init())).contains("group"))
-        #expect(UserMessages.text(forEditError: LayoutEditError.indexOutOfRange(9)).contains("dropped"))
+        func text(_ error: any Error) -> String { UserMessages.text(forEditError: error, names: names) }
+        #expect(text(LayoutEditError.notHidable(item)).contains("Example — Status must stay"))
+        #expect(text(LayoutEditError.unknownItem(item)).contains("icon"))
+        #expect(text(LayoutEditError.unknownGroup(.init())).contains("group"))
+        #expect(text(LayoutEditError.indexOutOfRange(9)).contains("dropped"))
     }
 
     @Test func anyOtherEditErrorIsShownAsRejected() {
-        let text = UserMessages.text(forEditError: GroupSymbolError.unknownSymbol("nope"))
+        let text = UserMessages.text(forEditError: GroupSymbolError.unknownSymbol("nope"), names: names)
         #expect(text.contains("rejected"))
         #expect(text.contains("nope"))
     }

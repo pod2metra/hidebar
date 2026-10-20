@@ -48,6 +48,21 @@ import Testing
         #expect(entries([FakeAXApp(items: [FakeAXItem(pid: 99)])]).isEmpty)
     }
 
+    /// Control Center's Wi-Fi item: a stable identifier, no title, and a localized description
+    /// that changes with the signal.
+    @Test func identifierWinsOverTitleAndDescription() {
+        let item = FakeAXItem(
+            title: nil, description: "Wi-Fi, connected, 3 bars", identifier: "com.apple.menuextra.wifi")
+        #expect(entries([FakeAXApp(items: [item])]).first?.owner.title == "com.apple.menuextra.wifi")
+        let titled = FakeAXItem(title: "Siri", description: "x", identifier: "id")
+        #expect(entries([FakeAXApp(items: [titled])]).first?.owner.title == "id")
+    }
+
+    @Test func emptyIdentifierFallsBackToTheTitle() {
+        let item = FakeAXItem(title: "Siri", description: "Description", identifier: "")
+        #expect(entries([FakeAXApp(items: [item])]).first?.owner.title == "Siri")
+    }
+
     @Test func titleComesFromAXTitleWhenPresent() {
         let item = FakeAXItem(title: "Title", description: "Description")
         #expect(entries([FakeAXApp(items: [item])]).first?.owner.title == "Title")

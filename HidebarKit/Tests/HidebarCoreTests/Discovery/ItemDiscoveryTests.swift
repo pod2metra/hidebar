@@ -14,6 +14,16 @@ import Testing
         #expect(ids(result) == [21])
     }
 
+    @Test func itemCarriesTheWindowNumberOwnerAndFrameToNameInADrag() throws {
+        let result = discover([window(21, x: 1566, ownerPID: 629)])
+        let found = try #require(result.first)
+        #expect(
+            found.window
+                == WindowTarget(
+                    windowID: 21, ownerPID: 629,
+                    frame: ItemFrame(x: 1566, y: 0, width: 46, height: 24)))
+    }
+
     @Test func offscreenTwinIsDroppedAndOnscreenOneKept() {
         let twin = window(154_021, x: 1566, onscreen: false, owner: "com.example.app")
         let real = window(21, x: 1566, owner: "com.example.app")
@@ -186,10 +196,14 @@ import Testing
 
     // MARK: unmovable and unhidable system items
 
+    /// Identities as Accessibility reports them: Control Center's items by `AXIdentifier`, Siri
+    /// by its title.
     @Test(arguments: [
-        (controlCenter, "Clock"), (controlCenter, "BentoBox"), ("com.apple.systemuiserver", "Siri"),
+        (controlCenter, "com.apple.menuextra.clock"),
+        (controlCenter, "com.apple.menuextra.controlcenter"),
+        ("com.apple.systemuiserver", "Siri"),
     ])
-    func unmovableItemIsManagedButNeitherMovableNorHidable(bundle: String, title: String) throws {
+    func systemItemIsManagedButNeitherMovableNorHidable(bundle: String, title: String) throws {
         let owners = [1: ItemOwner(bundleID: bundle, title: title)]
         let result = try #require(discover([window(1, x: 10)], owners: owners).first)
         #expect(result.isManaged)
@@ -197,25 +211,16 @@ import Testing
         #expect(!result.item.isHidable)
     }
 
-    @Test(arguments: ["AudioVideoModule", "FaceTime", "MusicRecognition"])
-    func movableButNotHidableItem(title: String) throws {
-        let owners = [1: ItemOwner(bundleID: controlCenter, title: title)]
+    @Test(arguments: [
+        (controlCenter, "com.apple.menuextra.wifi"), (controlCenter, "com.apple.menuextra.bluetooth"),
+        (controlCenter, "com.apple.menuextra.battery"), ("com.apple.systemuiserver", ""),
+        ("com.apple.Spotlight", "Spotlight"), ("com.example.app", "Siri"),
+        ("com.example.app", "com.apple.menuextra.clock"), (controlCenter, "Siri"),
+    ])
+    func otherItemsAreMovableAndHidable(bundle: String, title: String) throws {
+        let owners = [1: ItemOwner(bundleID: bundle, title: title)]
         let result = try #require(discover([window(1, x: 10)], owners: owners).first)
-        #expect(result.isManaged)
         #expect(result.item.isMovable)
-        #expect(!result.item.isHidable)
-    }
-
-    @Test func systemKeyNeedsBothBundleAndTitle() throws {
-        let owners = [
-            1: ItemOwner(bundleID: "com.example.app", title: "Clock"),
-            2: ItemOwner(bundleID: controlCenter, title: "Weather"),
-            3: ItemOwner(bundleID: controlCenter, title: "Siri"),
-            4: ItemOwner(bundleID: "com.apple.systemuiserver", title: "FaceTime"),
-        ]
-        let rows = (1...4).map { window($0, x: Double($0) * 50) }
-        let result = discover(rows, owners: owners)
-        #expect(result.map(\.item.isMovable) == [true, true, true, true])
-        #expect(result.map(\.item.isHidable) == [true, true, true, true])
+        #expect(result.item.isHidable)
     }
 }

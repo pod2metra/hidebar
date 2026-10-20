@@ -13,6 +13,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     private let model: SettingsViewModel
     private let composition: AppComposition
     private let table: SettingsTable
+    private let names: ItemNames
     private let notice: String?
     private let window = NSWindow(
         contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
@@ -23,11 +24,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     /// The reason the last edit of the draft was refused.
     private var editError: String?
 
-    init(model: SettingsViewModel, composition: AppComposition, notice: String?) {
+    init(model: SettingsViewModel, composition: AppComposition, names: ItemNames, notice: String?) {
         self.model = model
         self.composition = composition
+        self.names = names
         self.notice = notice
-        table = SettingsTable(model: model)
+        table = SettingsTable(model: model, names: names)
         super.init()
         table.onDrop = { [weak self] item, drop in
             self?.edit { try $0.move(item, to: drop.placement, at: drop.index) }
@@ -52,6 +54,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     @objc private func applyTapped() {
         let refusal = composition.apply(model)
+        logApply(desired: model.desiredBarOrder, refusal: refusal, failure: model.failure)
         editError = refusal.map { UserMessages.text(for: $0) }
         refresh()
         if refusal == nil && model.failure == nil { onApplied(model.saved) }
@@ -80,7 +83,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             try change(model)
             editError = nil
         } catch {
-            editError = UserMessages.text(forEditError: error)
+            editError = UserMessages.text(forEditError: error, names: names)
         }
         refresh()
     }
@@ -91,7 +94,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         table.reload()
         applyButton.isEnabled = model.isDirty
         revertButton.isEnabled = model.isDirty || model.failure != nil
-        let failure = model.failure.map(UserMessages.text(for:))
+        let failure = model.failure.map { UserMessages.text(for: $0, names: names) }
         message.stringValue = editError ?? failure ?? notice ?? ""
         message.textColor = (editError ?? failure) == nil ? .secondaryLabelColor : .systemRed
         message.isHidden = message.stringValue.isEmpty

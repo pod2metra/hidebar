@@ -45,7 +45,7 @@ func discovered(
     _ name: String, x: Double = 0, windowID: Int = 1, managed: Bool = true, movable: Bool = true
 ) -> DiscoveredItem {
     DiscoveredItem(
-        windowID: windowID,
+        windowID: windowID, ownerPID: 688,
         item: MenuBarItem(
             id: moveID(name), frame: ItemFrame(x: x, y: 0, width: 10, height: 20),
             isMovable: movable, isHidable: movable),

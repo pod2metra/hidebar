@@ -13,6 +13,7 @@ struct FakeAXItem: Sendable {
     var frame: ItemFrame? = ItemFrame(x: 100, y: 0, width: 46, height: 24)
     var title: String? = "Item"
     var description: String?
+    var identifier: String?
 }
 
 struct FakeAXApp: Sendable {
@@ -46,7 +47,12 @@ struct FakeAXTree: AXTreeReading {
     }
 
     func attribute(_ name: String, of node: [Int]) -> String? {
-        name == "AXTitle" ? item(node)?.title : name == "AXDescription" ? item(node)?.description : nil
+        switch name {
+        case "AXTitle": item(node)?.title
+        case "AXDescription": item(node)?.description
+        case "AXIdentifier": item(node)?.identifier
+        default: nil
+        }
     }
 
     func frame(of node: [Int]) -> ItemFrame? { item(node)?.frame }

@@ -25,7 +25,7 @@ import Testing
     private let gate: InputGate
 
     private var executor: MoveExecutor {
-        MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
+        MoveExecutor(poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate)
     }
 
     private func proxy(
@@ -50,7 +50,7 @@ import Testing
     }
 
     private let revealed: [MoveEvent] = [
-        .down(CursorPoint(x: 105, y: 10)), .up(CursorPoint(x: 20, y: 10)), .wait(25),
+        .down(CommandDrag.pressPoint), .up(CursorPoint(x: 20, y: 10)), .wait(25),
         .setCursor(CursorPoint(x: 900, y: 500)),
     ]
 
@@ -82,7 +82,7 @@ import Testing
         #expect(
             bar.log == revealed + [
                 .click(CursorPoint(x: 27, y: 10)), .setCursor(saved),
-                .down(CursorPoint(x: 27, y: 10)), .up(CursorPoint(x: 120, y: 10)), .wait(25),
+                .down(CommandDrag.pressPoint), .up(CursorPoint(x: 120, y: 10)), .wait(25),
                 .setCursor(saved),
             ])
         #expect(bar.cursor == saved)
@@ -206,7 +206,7 @@ import Testing
         #expect(
             bar.log == revealed + [
                 .click(CursorPoint(x: 27, y: 10)), .setCursor(saved),
-                .down(CursorPoint(x: 27, y: 10)), .up(CursorPoint(x: 120, y: 10)), .wait(25),
+                .down(CommandDrag.pressPoint), .up(CursorPoint(x: 120, y: 10)), .wait(25),
                 .setCursor(saved),
             ])
     }
@@ -390,7 +390,7 @@ import Testing
 
         timer.advance(by: 1)
         #expect(!proxy.hasDisplacedItem)
-        #expect(bar.downs == [CursorPoint(x: 105, y: 10), CursorPoint(x: 27, y: 10)])
+        #expect(bar.downs == [CommandDrag.pressPoint, CommandDrag.pressPoint])
         #expect(bar.ups.last == CursorPoint(x: 120, y: 10))
         #expect(bar.cursor == saved)
     }

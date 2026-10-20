@@ -33,7 +33,8 @@ import Testing
         }
         return SettingsViewModel(
             layout: try layout(), store: LayoutStore(store: store ?? backing),
-            executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: InputGate()),
+            executor: MoveExecutor(
+                poster: bar, locator: bar, windows: bar, clock: bar, inputGate: InputGate()),
             separator: separator,
             barItems: { current })
     }
@@ -46,6 +47,13 @@ import Testing
     private func storedLayout() throws -> Layout? {
         let result = try LayoutStore(store: backing).load()
         return result.status == .missing ? nil : result.layout
+    }
+
+    @Test func fixedItemsAreTheOnesTheBarCannotMove() throws {
+        let items = [moveItem("a"), moveItem("clock", movable: false), moveItem("b")]
+        let model = try makeModel(items: items)
+        #expect(model.fixedItems == [moveID("clock")])
+        #expect(try makeModel(items: [moveItem("a")]).fixedItems.isEmpty)
     }
 
     // MARK: state

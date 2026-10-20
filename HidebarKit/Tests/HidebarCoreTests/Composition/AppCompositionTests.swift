@@ -5,7 +5,7 @@ import Testing
 
 func ownDiscovered(_ title: String, x: Double = 0, windowID: Int = 90) -> DiscoveredItem {
     DiscoveredItem(
-        windowID: windowID,
+        windowID: windowID, ownerPID: 688,
         item: MenuBarItem(
             id: MenuBarItemID(ownerBundleID: OwnItems.bundleID, title: title),
             frame: ItemFrame(x: x, y: 0, width: 10, height: 20), isMovable: true, isHidable: true),
@@ -129,7 +129,8 @@ func ownDiscovered(_ title: String, x: Double = 0, windowID: Int = 90) -> Discov
         return SettingsViewModel(
             layout: layout, store: LayoutStore(store: scene.backing),
             executor: MoveExecutor(
-                poster: scene.bar, locator: scene.bar, clock: scene.bar, inputGate: scene.gate),
+                poster: scene.bar, locator: scene.bar, windows: scene.bar, clock: scene.bar,
+                inputGate: scene.gate),
             separator: OwnItems.separatorID, barItems: { [composition] in composition.barItems() })
     }
 

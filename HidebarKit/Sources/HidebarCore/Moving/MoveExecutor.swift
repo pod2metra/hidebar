@@ -16,8 +16,9 @@ public enum MovePlanResult: Equatable, Sendable {
     case stopped(stepIndex: Int, outcome: MoveOutcome)
 }
 
-/// Drags menu bar items with synthetic Command-clicks, the way Ice does: Command-down on the item,
-/// Command-up at the edge of the anchor, then poll until the item's frame changes.
+/// Drags menu bar items with synthetic Command-clicks, the way Ice does: Command-down aimed at the
+/// item's window, Command-up aimed at the anchor's window at its edge, then poll until the item's
+/// frame changes.
 ///
 /// Rules held here: an unmovable item gets no events at all; every attempt that posts events puts
 /// the cursor back where it was, whether or not the item moved; a layout is handed to
@@ -31,21 +32,26 @@ public final class MoveExecutor {
     public static let maxRetries = 2
     /// Frame polls after one drag.
     public static let pollLimit = 10
+    /// Asks for the windows a drag names, per attempt, while the bar re-lays out.
+    public static let windowPollLimit = 10
     public static let pollIntervalMilliseconds = 25
 
     private let poster: any EventPosting
     private let locator: any ItemLocating
+    private let windows: any WindowLocating
     private let clock: any MoveClock
     private let inputGate: InputGate
 
-    /// `inputGate` is the one the event tap adapter consults; it has no default, so a composition
-    /// cannot leave rule 4 switched off by forgetting it.
+    /// `locator` tells where an item is (to see it move), `windows` which window to name in the
+    /// drag. `inputGate` is the one the event tap adapter consults; it has no default, so a
+    /// composition cannot leave rule 4 switched off by forgetting it.
     public init(
-        poster: any EventPosting, locator: any ItemLocating, clock: any MoveClock,
-        inputGate: InputGate
+        poster: any EventPosting, locator: any ItemLocating, windows: any WindowLocating,
+        clock: any MoveClock, inputGate: InputGate
     ) {
         self.poster = poster
         self.locator = locator
+        self.windows = windows
         self.clock = clock
         self.inputGate = inputGate
     }
@@ -100,24 +106,29 @@ public final class MoveExecutor {
 
     private func attempt(_ step: MoveStep) -> Bool {
         let id = step.item.id
-        guard let before = locator.frame(of: id), let anchor = locator.frame(of: step.anchor) else {
-            return false
-        }
+        guard let before = locator.frame(of: id),
+            let (item, anchor) = awaitWindows(of: id, and: step.anchor)
+        else { return false }
         let savedCursor = poster.cursorPosition()
         defer { poster.setCursorPosition(savedCursor) }
         guard !inputGate.isOverdue else { return false }
-        let y = before.y + before.height / 2
-        let posted = poster.postCommandDrag(
-            from: CursorPoint(x: before.x + before.width / 2, y: y),
-            to: CursorPoint(x: dropX(step.side, anchor: anchor), y: y))
+        let posted = poster.postCommandDrag(CommandDrag(item: item, anchor: anchor, side: step.side))
         return posted && awaitMove(of: id, from: before)
     }
 
-    private func dropX(_ side: DropSide, anchor: ItemFrame) -> Double {
-        switch side {
-        case .leftOf: anchor.x
-        case .rightOf: anchor.x + anchor.width
+    /// Windows of the item and of the anchor. A bar that is still re-laying out after the last
+    /// drag may not have them yet, so they are asked for again, at most `windowPollLimit` times.
+    private func awaitWindows(
+        of item: MenuBarItemID, and anchor: MenuBarItemID
+    ) -> (item: WindowTarget, anchor: WindowTarget)? {
+        for _ in 0..<Self.windowPollLimit {
+            guard !inputGate.isOverdue else { return nil }
+            if let found = windows.window(of: item), let beside = windows.window(of: anchor) {
+                return (found, beside)
+            }
+            clock.wait(milliseconds: Self.pollIntervalMilliseconds)
         }
+        return nil
     }
 
     private func awaitMove(of id: MenuBarItemID, from before: ItemFrame) -> Bool {

@@ -16,7 +16,7 @@ final class AppController: NSObject {
     private var permissions: PermissionsState
 
     override init() {
-        panel = GroupPanelWindow(snapshotter: services.snapshotter)
+        panel = GroupPanelWindow(snapshotter: services.snapshotter, names: services.names)
         strip = OverflowStripWindow(services: services)
         permissions = services.permissions.current()
         super.init()
@@ -124,7 +124,7 @@ final class AppController: NSObject {
             let start = try services.composition.startupLayout(from: services.store)
             let window = SettingsWindow(
                 model: services.makeSettingsModel(layout: start.layout),
-                composition: services.composition, notice: start.notice)
+                composition: services.composition, names: services.names, notice: start.notice)
             window.onApplied = { [weak self] saved in self?.applied(saved) }
             window.onClose = { [weak self] in self?.settings = nil }
             settings = window
