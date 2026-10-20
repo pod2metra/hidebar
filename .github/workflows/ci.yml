@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Weekly mutation run, Mondays 04:00 UTC.
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  # The event name keeps a long scheduled mutation run from queueing pushes to main.
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # HidebarKit/Package.swift declares swift-tools-version 6.4, which needs
+  # Xcode 27. The macos-15 and macos-26 images ship Xcode 16.x / 26.x only, so
+  # every job runs on the `xcode-27` image (macOS 27, Xcode 27.0 default, 27.1
+  # installed beside it). Pin 27.1 and select it through DEVELOPER_DIR so that
+  # swift, xcrun (llvm-cov) and xcodebuild all resolve to the same toolchain.
+  DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+
+jobs:
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # No SPM cache: the package has no dependencies, and a .build restored
+      # from another toolchain fails with "module compiled with Swift X".
+      - run: make test
+      - run: make coverage
+      - run: make lint
+
+  build-app:
+    if: github.event_name != 'schedule'
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Hidebar (unsigned)
+        run: >
+          xcodebuild -project Hidebar.xcodeproj -scheme Hidebar
+          -configuration Debug build
+          CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
+
+  mutation:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: xcode-27
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Muter
+        run: brew install muter-mutation-testing/formulae/muter
+
+      - run: make mutation
