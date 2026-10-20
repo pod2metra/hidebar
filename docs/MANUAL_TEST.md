@@ -59,7 +59,8 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 5.1 | Create a group with a symbol from the picker | A new status item with that SF Symbol appears to the right of the separator | |
+| 5.1 | Create a group with a symbol from the picker | A new status item with that SF Symbol appears to the right of the separator (this also verifies the unconfirmed assumption that a smaller `NSStatusItem Preferred Position` value means closer to the right edge) | |
+| 5.1a | Run `swift run --package-path Spikes/MoveSpike MoveSpike list` with the app running | The separator and every group item are listed with distinct titles | |
 | 5.2 | Move icons into the group, Apply, click the group icon | A panel drops down with snapshots of the group's icons | |
 | 5.3 | Click an icon in the panel | Its own menu opens; after the menu closes the icon goes back into hiding | |
 | 5.4 | Click an icon whose click opens no menu | The icon is restored within about 10 seconds | |

@@ -22,6 +22,13 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     var onWait: (Int) -> Void = { _ in }
     /// What `postClick` reports; false simulates an event that could not be posted.
     var clickPosts = true
+    /// When set, every call records whether this gate was suppressing user input at that moment.
+    var gate: InputGate?
+    private(set) var gateSamples: [Bool] = []
+
+    private func sample() {
+        gate.map { gateSamples.append($0.suppressUserInput) }
+    }
 
     var clicks: [CursorPoint] { log.compactMap { if case .click(let point) = $0 { point } else { nil } } }
     var downs: [CursorPoint] { log.compactMap { if case .down(let point) = $0 { point } else { nil } } }
@@ -31,37 +38,44 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     }
 
     func cursorPosition() -> CursorPoint {
+        sample()
         cursorReads += 1
         return cursor
     }
 
     func setCursorPosition(_ point: CursorPoint) {
+        sample()
         cursor = point
         log.append(.setCursor(point))
     }
 
     func postCommandMouseDown(at point: CursorPoint) {
+        sample()
         cursor = point
         log.append(.down(point))
     }
 
     func postCommandMouseUp(at point: CursorPoint) {
+        sample()
         cursor = point
         log.append(.up(point))
     }
 
     func postClick(at point: CursorPoint) -> Bool {
+        sample()
         cursor = point
         log.append(.click(point))
         return clickPosts
     }
 
     func frame(of id: MenuBarItemID) -> ItemFrame? {
+        sample()
         lookups += 1
         return frames[id]
     }
 
     func wait(milliseconds: Int) {
+        sample()
         waits += 1
         log.append(.wait(milliseconds))
         onWait(waits)

@@ -62,7 +62,7 @@ public final class GroupPanelViewModel {
     private static func row(
         for id: MenuBarItemID, match: DiscoveredItem?, capabilities: Capabilities
     ) -> GroupPanelRow {
-        let name = id.title.isEmpty ? id.ownerBundleID : id.title
+        let name = id.displayName
         guard capabilities.canIdentifyOwners else {
             return GroupPanelRow(id: id, name: name, content: .appName, isClickable: false)
         }

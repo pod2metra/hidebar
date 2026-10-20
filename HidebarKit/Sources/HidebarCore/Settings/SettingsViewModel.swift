@@ -68,6 +68,11 @@ public final class SettingsViewModel {
         !nonHidable.contains(item)
     }
 
+    /// Whether the window may accept a drop of `item` into `placement`; `false` disables the drop.
+    public func canDrop(_ item: MenuBarItemID, on placement: Placement) -> Bool {
+        placement == .visible || canHide(item)
+    }
+
     private var nonHidable: Set<MenuBarItemID> {
         Set(barItems().filter { !$0.isHidable }.map(\.id))
     }
@@ -121,7 +126,9 @@ public final class SettingsViewModel {
         guard bar.contains(where: { $0.id == separator && $0.isMovable }) else {
             return .separatorUnavailable
         }
-        let steps = MovePlanner.plan(current: bar, desired: desiredBarOrder)
+        // The separator is the boundary the others are arranged around: it is an anchor and is
+        // never dragged, or the icons of this app would end up on the wrong side of it.
+        let steps = MovePlanner.plan(current: bar, desired: desiredBarOrder, pinned: separator)
         let result = try executor.execute(steps, confirming: draft) { [self] confirmed in
             try store.save(confirmed)
             saved = confirmed

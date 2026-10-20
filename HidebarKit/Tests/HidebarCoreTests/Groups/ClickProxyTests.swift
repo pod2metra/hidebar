@@ -21,9 +21,10 @@ import Testing
     }
 
     private let timer = ManualClock()
+    private let gate = InputGate()
 
     private var executor: MoveExecutor {
-        MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: InputGate())
+        MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
     }
 
     private func proxy(
@@ -32,7 +33,7 @@ import Testing
     ) -> ClickProxy {
         ClickProxy(
             executor: executor, poster: bar, locator: locator ?? bar, separator: moveID("sep"),
-            revealSide: revealSide, clock: timer, restoreTimeout: timeout)
+            revealSide: revealSide, clock: timer, inputGate: gate, restoreTimeout: timeout)
     }
 
     private func place(_ name: String, x: Double, width: Double = 10) {
@@ -232,6 +233,88 @@ import Testing
         #expect(bar.log == revealed)
         #expect(bar.clicks.isEmpty)
         #expect(!proxy.hasDisplacedItem)
+    }
+
+    // MARK: input gate
+
+    @Test func userInputStaysSuppressedFromTheRevealThroughTheCursorRestore() {
+        bar.gate = gate
+        moves([1: 22])
+        #expect(proxy().click(moveID("a"), among: all) == .clicked)
+        // Every lookup, wait, cursor access and posted event of the click was sampled. The first
+        // sample is the lookup that decides whether to refuse, before any event can be posted.
+        #expect(bar.gateSamples.count == bar.lookups + bar.cursorReads + bar.log.count)
+        #expect(bar.gateSamples.dropFirst().allSatisfy { $0 })
+        #expect(!gate.suppressUserInput)
+    }
+
+    @Test func gateIsReleasedWhenTheRevealFails() {
+        #expect(proxy().click(moveID("a"), among: all) == .revealFailed)
+        #expect(!gate.suppressUserInput)
+    }
+
+    @Test func gateIsReleasedWhenTheClickFails() {
+        bar.clickPosts = false
+        moves([1: 22, 2: 110])
+        #expect(proxy().click(moveID("a"), among: all) == .clickFailed)
+        #expect(!gate.suppressUserInput)
+    }
+
+    // MARK: onRestoreTimeout
+
+    @Test func timeoutHandlerRunsInsteadOfTheProxysOwnRestore() {
+        moves([1: 22, 2: 110])
+        let proxy = proxy()
+        var calls = 0
+        proxy.onRestoreTimeout = { calls += 1 }
+        #expect(proxy.click(moveID("a"), among: all) == .clicked)
+        let events = bar.log.count
+
+        timer.advance(by: 9)
+        #expect(calls == 0)
+        timer.advance(by: 1)
+        #expect(calls == 1)
+        #expect(proxy.hasDisplacedItem)
+        #expect(bar.log.count == events)
+    }
+
+    @Test func itemIsStillReturnedByTheHandlerCallingRestore() {
+        moves([1: 22, 2: 110])
+        let proxy = proxy()
+        proxy.onRestoreTimeout = { proxy.restoreIfDisplaced() }
+        #expect(proxy.click(moveID("a"), among: all) == .clicked)
+        timer.advance(by: 10)
+        #expect(!proxy.hasDisplacedItem)
+    }
+
+    // MARK: restoreIfDisplaced
+
+    @Test func restoreWithNothingAwayDoesNothing() {
+        #expect(proxy().restoreIfDisplaced() == .nothingToRestore)
+        #expect(bar.log.isEmpty)
+    }
+
+    @Test func restoreRetriesAReturnThatFailedOnTheTimeout() {
+        moves([1: 22])
+        let proxy = proxy()
+        #expect(proxy.click(moveID("a"), among: all) == .clicked)
+        timer.advance(by: 10)
+        #expect(proxy.hasDisplacedItem)
+
+        moves([32: 110])
+        #expect(proxy.restoreIfDisplaced() == .restored)
+        #expect(!proxy.hasDisplacedItem)
+        #expect(bar.ups.last == CursorPoint(x: 120, y: 10))
+        #expect(bar.cursor == saved)
+    }
+
+    @Test func restoreThatKeepsFailingLeavesTheItemPendingForTheNextTry() {
+        moves([1: 22])
+        let proxy = proxy()
+        #expect(proxy.click(moveID("a"), among: all) == .clicked)
+        #expect(proxy.restoreIfDisplaced() == .failed)
+        #expect(proxy.hasDisplacedItem)
+        #expect(proxy.click(moveID("b"), among: all) == .refused(.displacedItemPending))
     }
 
     // MARK: menuDidClose

@@ -47,17 +47,25 @@ public final class ClickProxy {
     private let separator: MenuBarItemID
     private let revealSide: DropSide
     private let clock: any SchedulingClock
+    private let inputGate: InputGate
     private let restoreTimeout: TimeInterval
     private var displaced: Displaced?
     private var restoreTimer: (any Cancellable)?
 
     public var hasDisplacedItem: Bool { displaced != nil }
 
-    /// `revealSide` is the side of `separator` where icons are on screen.
+    /// Runs, instead of the proxy's own restore, when `restoreTimeout` passes without
+    /// `menuDidClose()`. A composition sets it to restore with the separator revealed, which the
+    /// proxy cannot do itself: the icon's home may be off screen.
+    public var onRestoreTimeout: (@MainActor () -> Void)?
+
+    /// `revealSide` is the side of `separator` where icons are on screen. `inputGate` is the one
+    /// the executor holds: user input stays suppressed from the reveal to the end of the click.
+    /// It has no default, so a composition cannot leave rule 4 switched off by forgetting it.
     public init(
         executor: MoveExecutor, poster: any EventPosting, locator: any ItemLocating,
         separator: MenuBarItemID, revealSide: DropSide, clock: any SchedulingClock,
-        restoreTimeout: TimeInterval = 10
+        inputGate: InputGate, restoreTimeout: TimeInterval = 10
     ) {
         self.executor = executor
         self.poster = poster
@@ -65,6 +73,7 @@ public final class ClickProxy {
         self.separator = separator
         self.revealSide = revealSide
         self.clock = clock
+        self.inputGate = inputGate
         self.restoreTimeout = restoreTimeout
     }
 
@@ -76,6 +85,10 @@ public final class ClickProxy {
         guard let origin = locator.frame(of: id) else { return .refused(.notLocated) }
         displaced = Displaced(
             item: found.item, originX: origin.x, homeAnchor: home.anchor, homeSide: home.side)
+        // One closure of the gate around reveal, click and cursor restore: input arriving between
+        // the reveal and the click must not reach the system.
+        inputGate.begin()
+        defer { inputGate.end() }
         let reveal = MoveStep(item: found.item, anchor: separator, side: revealSide)
         guard executor.move(reveal) == .moved else {
             returnHome()
@@ -85,7 +98,7 @@ public final class ClickProxy {
             returnHome()
             return .clickFailed
         }
-        restoreTimer = clock.schedule(after: restoreTimeout) { [weak self] in self?.menuDidClose() }
+        restoreTimer = clock.schedule(after: restoreTimeout) { [weak self] in self?.restoreTimedOut() }
         return .clicked
     }
 
@@ -95,6 +108,22 @@ public final class ClickProxy {
         restoreTimer?.cancel()
         restoreTimer = nil
         return returnHome()
+    }
+
+    /// Brings a displaced icon home now. The app calls it whenever a group panel opens or closes:
+    /// a restore that failed (on the timeout or on `menuDidClose()`) leaves the icon pending and
+    /// refuses every further click, and nothing else would retry it. Does nothing when no icon is away.
+    @discardableResult
+    public func restoreIfDisplaced() -> RestoreOutcome {
+        menuDidClose()
+    }
+
+    private func restoreTimedOut() {
+        guard let handler = onRestoreTimeout else {
+            menuDidClose()
+            return
+        }
+        handler()
     }
 
     @discardableResult

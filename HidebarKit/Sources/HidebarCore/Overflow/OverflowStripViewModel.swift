@@ -1,10 +1,18 @@
 /// Rows of the overflow strip: the icons that do not fit the menu bar, shown in a panel under it.
 ///
+/// Only the visible section takes part: the icons right of the separator, which are the ones the
+/// user wants on the bar. Hidden icons and the app's own items (the separator, the toggle, the
+/// group icons) never become rows, but the own ones take room on the bar and so count in the fit.
+///
 /// Rows run left to right in bar order. Their widths and `spacing` are the single source for
-/// both the scroll content width and the visible range.
+/// both the scroll content width and the visible range, and for where a view draws each row.
 @MainActor
 public final class OverflowStripViewModel {
     public private(set) var rows: [GroupPanelRow] = []
+    /// Width of every row, in row order.
+    public private(set) var itemWidths: [Double] = []
+    /// Gap between neighbouring rows.
+    public private(set) var spacing = 0.0
     public private(set) var scrollModel = ScrollModel(contentWidth: 0, viewportWidth: 0)
 
     /// True when every icon fits the bar: the strip is not shown.
@@ -15,11 +23,14 @@ public final class OverflowStripViewModel {
         scrollModel.visibleRange(itemWidths: itemWidths, spacing: spacing)
     }
 
+    /// Where row `index` starts in the content, before the scroll offset is taken off.
+    public func rowStart(at index: Int) -> Double {
+        itemWidths.prefix(index).reduce(0, +) + spacing * Double(index)
+    }
+
     private let snapshotter: any Snapshotting
     private let clickProxy: ClickProxy
     private var items: [DiscoveredItem] = []
-    private var itemWidths: [Double] = []
-    private var spacing = 0.0
     private var generation = 0
 
     public init(snapshotter: any Snapshotting, clickProxy: ClickProxy) {
@@ -36,9 +47,9 @@ public final class OverflowStripViewModel {
         generation += 1
         let mine = generation
         self.items = items
-        let rightToLeft = Self.rightToLeft(items)
+        let rightToLeft = Self.rightToLeft(Self.visibleSection(items))
         let overflow = screen.partition(itemWidths: rightToLeft.map(Self.width)).overflow
-        let strip = Array(rightToLeft[overflow].reversed())
+        let strip = rightToLeft[overflow].reversed().filter(Self.isForeign)
         itemWidths = strip.map(Self.width)
         spacing = screen.spacing
         scrollModel = ScrollModel(
@@ -66,6 +77,22 @@ public final class OverflowStripViewModel {
             guard mine == generation else { return }
             if let image { rows[index].content = .snapshot(image) }
         }
+    }
+
+    /// The separator and everything right of it; all items when the separator is not on the bar.
+    private static func visibleSection(_ items: [DiscoveredItem]) -> [DiscoveredItem] {
+        guard let boundary = items.first(where: { $0.item.id == OwnItems.separatorID }) else {
+            return items
+        }
+        return items.filter { isAtOrRight(of: boundary, $0) }
+    }
+
+    private static func isAtOrRight(of boundary: DiscoveredItem, _ found: DiscoveredItem) -> Bool {
+        found.item.frame.x >= boundary.item.frame.x
+    }
+
+    private static func isForeign(_ found: DiscoveredItem) -> Bool {
+        !OwnItems.isOwn(found.item.id)
     }
 
     /// Rightmost first, as `OverflowCalculator.partition` expects; equal positions keep input order.

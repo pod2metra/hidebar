@@ -113,15 +113,16 @@ import Testing
         }
     }
 
-    /// Fewest "take one item out, put it anywhere" moves from the identity order to each permutation.
-    private func minimumMoves(_ count: Int) -> [[Int]: Int] {
+    /// Fewest "take one item out, put it anywhere" moves from the identity order to each permutation,
+    /// never taking out `pinned`.
+    private func minimumMoves(_ count: Int, pinned: Int? = nil) -> [[Int]: Int] {
         let start = Array(0..<count)
         var distance = [start: 0]
         var frontier = [start]
         while !frontier.isEmpty {
             var next: [[Int]] = []
             for state in frontier {
-                for from in state.indices {
+                for from in state.indices where state[from] != pinned {
                     for to in state.indices where to != from {
                         var moved = state
                         moved.insert(moved.remove(at: from), at: to)
@@ -135,6 +136,48 @@ import Testing
             frontier = next
         }
         return distance
+    }
+
+    // MARK: pinned item
+
+    @Test func pinnedItemIsAnAnchorAndNeverDraggedWhenOthersHaveToCrossIt() {
+        // x sep a b → hide a and b: the icons cross the separator, the separator does not move.
+        let current = items("xsab")
+        let steps = MovePlanner.plan(current: current, desired: ids("absx"), pinned: moveID("s"))
+        #expect(steps.count == 3)
+        #expect(!steps.map(\.item.id).contains(moveID("s")))
+        #expect(apply(steps, to: current.map(\.id)) == ids("absx"))
+    }
+
+    @Test func pinnedItemThatIsNotAmongTheManagedItemsChangesNothing() {
+        let plain = MovePlanner.plan(current: items("abc"), desired: ids("cab"))
+        #expect(MovePlanner.plan(current: items("abc"), desired: ids("cab"), pinned: moveID("zz")) == plain)
+        #expect(MovePlanner.plan(current: items("abc"), desired: ids("cab"), pinned: moveID("a")) == plain)
+    }
+
+    @Test func pinnedItemAtTheEndsOfTheBarStaysToo() {
+        for pinned in ["a", "e"] {
+            let current = items("abcde")
+            let steps = MovePlanner.plan(current: current, desired: ids("edcba"), pinned: moveID(pinned))
+            #expect(!steps.map(\.item.id).contains(moveID(pinned)))
+            #expect(apply(steps, to: current.map(\.id)) == ids("edcba"))
+        }
+    }
+
+    @Test func pinnedPlansAreMinimalAndNeverDragTheirPinnedItem() {
+        let names = Array("abcde")
+        for pinned in names.indices {
+            let minimum = minimumMoves(5, pinned: pinned)
+            for permutation in permutations(5) {
+                let desired = permutation.map { moveID(String(names[$0])) }
+                let current = items("abcde")
+                let steps = MovePlanner.plan(
+                    current: current, desired: desired, pinned: moveID(String(names[pinned])))
+                #expect(steps.count == minimum[permutation])
+                #expect(!steps.map(\.item.id).contains(moveID(String(names[pinned]))))
+                #expect(apply(steps, to: current.map(\.id)) == desired)
+            }
+        }
     }
 
     @Test(arguments: [false, true])

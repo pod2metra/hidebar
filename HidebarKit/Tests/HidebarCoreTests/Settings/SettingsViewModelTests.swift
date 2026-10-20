@@ -106,6 +106,11 @@ import Testing
         #expect(!model.canHide(moveID("a")))
         #expect(model.canHide(moveID("b")))
         #expect(model.canHide(moveID("not-on-the-bar")))
+        #expect(model.canDrop(moveID("a"), on: .visible))
+        #expect(!model.canDrop(moveID("a"), on: .hidden))
+        #expect(!model.canDrop(moveID("a"), on: .group(groupID)))
+        #expect(model.canDrop(moveID("b"), on: .hidden))
+        #expect(model.canDrop(moveID("b"), on: .group(groupID)))
         #expect(throws: LayoutEditError.notHidable(moveID("a"))) {
             try model.move(moveID("a"), to: .hidden, at: 0)
         }
@@ -181,9 +186,11 @@ import Testing
         let model = try makeModel()
         confirmEveryDrag()
         try model.move(moveID("a"), to: .hidden, at: 0)
-        let steps = MovePlanner.plan(current: barItems(), desired: model.desiredBarOrder)
+        let steps = MovePlanner.plan(
+            current: barItems(), desired: model.desiredBarOrder, pinned: separator)
         model.apply()
         #expect(!steps.isEmpty)
+        #expect(!steps.map(\.item.id).contains(separator))
         #expect(bar.downs.count == steps.count)
         #expect(model.failure == nil)
         #expect(!model.isDirty)

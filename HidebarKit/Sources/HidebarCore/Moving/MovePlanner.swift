@@ -25,13 +25,20 @@ public struct MoveStep: Equatable, Sendable {
 /// Only items that are movable and named by the desired order take part. Everything else
 /// (unmovable system items, items the desired order does not mention, ids that are not on the bar)
 /// is never dragged and never used as a drop anchor; moved items may end up on either side of it.
-/// Drags needed: the managed items minus the longest run of them already in the right order.
+/// Drags needed: the managed items minus the longest run of them already in the right order;
+/// with a pinned item, minus the longest such run that passes through it.
 public enum MovePlanner {
     /// - Parameters:
     ///   - current: items left to right, as observed now.
     ///   - desired: ids left to right in the order they should end up.
+    ///   - pinned: an item that is never dragged but still takes its place in `desired` and serves as
+    ///     an anchor, such as the separator the other icons are arranged around. Everything that is
+    ///     on the wrong side of it is dragged across instead. Ignored when it is not among the
+    ///     movable items named by `desired`.
     /// - Returns: steps to run in order; empty when the managed items are already in order.
-    public static func plan(current: [MenuBarItem], desired: [MenuBarItemID]) -> [MoveStep] {
+    public static func plan(
+        current: [MenuBarItem], desired: [MenuBarItemID], pinned: MenuBarItemID? = nil
+    ) -> [MoveStep] {
         let rank = Dictionary(
             desired.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         let managed: [(item: MenuBarItem, rank: Int)] = current.compactMap { item in
@@ -46,17 +53,29 @@ public enum MovePlanner {
             position[k] = place
         }
 
-        return drops(order: order, position: position).map { drop in
+        let managedIDs = managed.map { $0.item.id }
+        let stay = staying(position: position, pinned: pinned.flatMap { managedIDs.firstIndex(of: $0) })
+        return drops(order: order, position: position, stay: stay).map { drop in
             MoveStep(item: managed[drop.moved].item, anchor: managed[drop.anchor].item.id, side: drop.side)
         }
     }
 
-    /// Drags that put every item outside the longest already-ordered run into its final place,
-    /// building the final order from the front.
+    /// The items that are not dragged: the longest already-ordered run, or, with a pinned item,
+    /// the longest run that contains it (the best chain ending at it plus the best one starting
+    /// at it).
+    private static func staying(position: [Int], pinned: Int?) -> Set<Int> {
+        guard let pinned else { return Set(longestIncreasing(position)) }
+        let head = longestIncreasing(Array(position[...pinned]), endingAt: pinned)
+        let mirrored = position[pinned...].reversed().map { -$0 }
+        let tail = longestIncreasing(mirrored, endingAt: mirrored.count - 1)
+        return Set(head + tail.map { position.count - 1 - $0 })
+    }
+
+    /// Drags that put every item outside `stay` into its final place, building the final order
+    /// from the front.
     private static func drops(
-        order: [Int], position: [Int]
+        order: [Int], position: [Int], stay: Set<Int>
     ) -> [(moved: Int, anchor: Int, side: DropSide)] {
-        let stay = Set(longestIncreasing(position))
         var working = Array(position.indices)
         var result: [(moved: Int, anchor: Int, side: DropSide)] = []
         for k in order where !stay.contains(k) {
@@ -75,8 +94,9 @@ public enum MovePlanner {
         return result
     }
 
-    /// Indices into `keys` of one longest strictly increasing subsequence.
-    private static func longestIncreasing(_ keys: [Int]) -> [Int] {
+    /// Indices into `keys` of one longest strictly increasing subsequence; with `endingAt`, the
+    /// longest one that ends at that index.
+    private static func longestIncreasing(_ keys: [Int], endingAt end: Int? = nil) -> [Int] {
         var length = [Int](repeating: 1, count: keys.count)
         var previous = [Int?](repeating: nil, count: keys.count)
         for index in keys.indices {
@@ -86,7 +106,7 @@ public enum MovePlanner {
             }
         }
         var chain: [Int] = []
-        var cursor = length.indices.max { length[$0] < length[$1] }
+        var cursor = end ?? length.indices.max { length[$0] < length[$1] }
         while let found = cursor {
             chain.append(found)
             cursor = previous[found]

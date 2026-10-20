@@ -34,10 +34,11 @@ import Testing
     }
 
     private var viewModel: OverflowStripViewModel {
-        let executor = MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: InputGate())
+        let gate = InputGate()
+        let executor = MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
         let proxy = ClickProxy(
             executor: executor, poster: bar, locator: bar, separator: moveID("sep"), revealSide: .rightOf,
-            clock: timer)
+            clock: timer, inputGate: gate)
         return OverflowStripViewModel(snapshotter: snapshotter, clickProxy: proxy)
     }
 
@@ -101,6 +102,55 @@ import Testing
         #expect(model.rows.map(\.id) == [moveID("q"), moveID("p")])
     }
 
+    // MARK: visible section only
+
+    private func own(_ title: String, x: Double, width: Double) -> DiscoveredItem {
+        DiscoveredItem(
+            windowID: 90,
+            item: MenuBarItem(
+                id: MenuBarItemID(ownerBundleID: OwnItems.bundleID, title: title),
+                frame: ItemFrame(x: x, y: 0, width: width, height: 20), isMovable: true, isHidable: true),
+            isManaged: true)
+    }
+
+    private var separator: DiscoveredItem { own(OwnItems.separatorTitle, x: 0, width: 10) }
+
+    @Test func iconsLeftOfTheSeparatorAreNeverRows() async {
+        let model = viewModel
+        await recompute(model, items: scene + [separator, entry("hidden", x: -60, width: 30)])
+        #expect(model.rows.map(\.id) == [moveID("a"), moveID("b")])
+    }
+
+    @Test func theSeparatorDoesNotBecomeARowEvenWhenItOverflows() async {
+        let model = viewModel
+        let nothingFits = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 100, spacing: 0)
+        await recompute(model, items: scene + [separator], screen: nothingFits)
+        #expect(model.rows.map(\.id) == [moveID("a"), moveID("b"), moveID("c"), moveID("d")])
+    }
+
+    @Test func ownIconsTakeRoomOnTheBarButAreNotRows() async {
+        let model = viewModel
+        // d and c fit in 80 points without the group icon; with it (30 wide) c no longer does.
+        await recompute(model, items: scene + [separator, own("Hidebar group", x: 240, width: 30)])
+        #expect(model.rows.map(\.id) == [moveID("a"), moveID("b"), moveID("c")])
+        #expect(model.itemWidths == [30, 40, 30])
+        #expect(model.spacing == 5)
+    }
+
+    @Test func anIconAtTheSeparatorsPositionIsStillInTheSection() async {
+        let model = viewModel
+        let nothingFits = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 100, spacing: 0)
+        await recompute(
+            model, items: [entry("edge", x: 0, width: 10), separator], screen: nothingFits)
+        #expect(model.rows.map(\.id) == [moveID("edge")])
+    }
+
+    @Test func withoutASeparatorEveryItemIsInTheSection() async {
+        let model = viewModel
+        await recompute(model, items: scene + [entry("far", x: -500, width: 30)])
+        #expect(model.rows.map(\.id) == [moveID("far"), moveID("a"), moveID("b")])
+    }
+
     // MARK: rows
 
     @Test func rowNameIsTheTitleOrTheBundleIdWhenThereIsNone() async {
@@ -138,6 +188,14 @@ import Testing
         #expect(model.scrollModel.viewportWidth == 40)
         #expect(model.scrollModel.maxOffset == 35)
         #expect(model.visibleRange == 0..<2)
+    }
+
+    @Test func rowsStartOneWidthAndOneSpacingAfterTheRowBefore() async {
+        let model = viewModel
+        await recompute(model)
+        #expect(model.rowStart(at: 0) == 0)
+        #expect(model.rowStart(at: 1) == 35)
+        #expect(model.rowStart(at: 2) == 80)
     }
 
     @Test func scrollingMovesTheOffsetAndTheVisibleRangeAndClampsAtBothEnds() async {

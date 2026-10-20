@@ -6,10 +6,9 @@ extension CGEventPoster {
     /// unless both halves of the click could be created.
     public func postClick(at point: CursorPoint) -> Bool {
         let types: [CGEventType] = [.leftMouseDown, .leftMouseUp]
-        let events = types.compactMap { clickEvent($0, at: point) }
-        let complete = events.count == types.count
-        (complete ? events : []).forEach { $0.post(tap: .cghidEventTap) }
-        return complete
+        return AllOrNothing.deliver(types.map { clickEvent($0, at: point) }) {
+            $0.post(tap: .cghidEventTap)
+        }
     }
 
     private func clickEvent(_ type: CGEventType, at point: CursorPoint) -> CGEvent? {

@@ -3,6 +3,15 @@ import Foundation
 public enum SeparatorState: Sendable, Equatable {
     case shown
     case hiding
+
+    /// SF Symbol of the toggle that sits next to the separator: it points at the side the
+    /// hidden icons are on while they are hidden.
+    public var toggleSymbolName: String {
+        switch self {
+        case .shown: "chevron.right"
+        case .hiding: "chevron.left"
+        }
+    }
 }
 
 /// Hides menu-bar icons by stretching the separator so everything left of it

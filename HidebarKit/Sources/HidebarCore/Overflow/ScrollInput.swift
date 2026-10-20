@@ -19,11 +19,12 @@ public struct ScrollInput: Sendable, Equatable {
 
     /// The `ScrollModel.apply(deltaX:)` argument: positive scrolls towards the content end.
     ///
-    /// A wheel only moves vertically, so its `deltaY` drives the strip. A trackpad drives it with
-    /// `deltaX`, and falls back to `deltaY` for a purely vertical swipe. Content follows the
-    /// gesture, hence the sign flip.
+    /// The axis with the larger magnitude drives the strip, whatever the device: a wheel turned
+    /// vertically, a Shift-wheel or horizontal wheel, a trackpad swipe in either direction. On a
+    /// tie the vertical axis wins. A wheel counts in lines, a trackpad in points. Content follows
+    /// the gesture, hence the sign flip.
     public var offsetDelta: Double {
-        guard hasPreciseDeltas else { return -deltaY * Self.pointsPerWheelLine }
-        return -(deltaX == 0 ? deltaY : deltaX)
+        let dominant = abs(deltaX) > abs(deltaY) ? deltaX : deltaY
+        return -dominant * (hasPreciseDeltas ? 1 : Self.pointsPerWheelLine)
     }
 }

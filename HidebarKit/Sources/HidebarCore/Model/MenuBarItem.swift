@@ -16,6 +16,11 @@ public struct MenuBarItemID: Hashable, Codable, Sendable {
         self.ownerBundleID = ownerBundleID
         self.title = title
     }
+
+    /// What a window shows for the item: its title, or the owner's bundle id when it has none.
+    public var displayName: String {
+        title.isEmpty ? ownerBundleID : title
+    }
 }
 
 /// Screen-space rectangle of an item, in points. Plain values so the model needs no CoreGraphics.
