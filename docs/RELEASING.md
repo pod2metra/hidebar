@@ -1,6 +1,7 @@
 # Releasing Hidebar
 
-A release is a git tag. Pushing `vMAJOR.MINOR.PATCH` runs `.github/workflows/release.yml`,
+A release is a git tag. Running the *Release* workflow with a version bump creates the tag, and
+pushing `vMAJOR.MINOR.PATCH` by hand also runs `.github/workflows/release.yml`,
 which builds the app, signs it with a Developer ID certificate, notarizes and staples the
 app and then the DMG, publishes the DMG as a GitHub Release, and updates the Homebrew cask in the tap repository.
 The site in `site/` is deployed separately by `.github/workflows/pages.yml`.
@@ -74,15 +75,29 @@ GitHub -> *Settings -> Developer settings -> Personal access tokens -> Fine-grai
 
 ## Cutting a release
 
-1. Make sure `main` is green in CI.
-2. Tag and push (the version is taken from the tag; `project.pbxproj` is never edited):
+The version comes only from the tag; `project.pbxproj` is never edited.
+
+1. Make sure CI has finished green on the `main` commit you want to release.
+2. Open *Actions -> Release -> Run workflow*, keep the branch `main`, and pick `bump`
+   (`patch`, `minor` or `major`); leave `tag` empty. The `tag` job:
+   - refuses to run from any branch other than `main`;
+   - requires a successful CI push run on that exact commit;
+   - refuses if the commit already carries a `v*` tag;
+   - creates the annotated tag `vX.Y.Z` with `scripts/next_version.sh` (the highest existing
+     `vMAJOR.MINOR.PATCH` tag plus the bump; `0.0.0` when there is none) and pushes it.
+
+   The tag is created inside the same run because a tag pushed with the workflow token does
+   not start the tag-triggered run. The `release` job follows in that run. Bump runs share
+   one concurrency group, so two button presses cannot race for the same tag.
+
+   Alternative: tag and push by hand. This path does not check CI, so check it yourself.
 
    ```bash
    git tag v0.2.0
    git push origin v0.2.0
    ```
 
-3. Watch the *Release* run. It then:
+3. Watch the *Release* run. The `release` job then:
    - builds with `MARKETING_VERSION=0.2.0` and `CURRENT_PROJECT_VERSION=<run number>`, and
      with `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` so the app icon from
      `App/Assets.xcassets` is included even while the project file does not set it;
@@ -95,7 +110,8 @@ GitHub -> *Settings -> Developer settings -> Personal access tokens -> Fine-grai
      the commit subjects since the previous `v*` tag (`scripts/release_notes.sh`);
    - writes `Casks/hidebar.rb` (version and SHA-256) to the tap and pushes it.
 
-To re-run for an existing tag, use *Actions -> Release -> Run workflow* and enter the tag.
+To re-run for an existing tag, use *Actions -> Release -> Run workflow*, leave `bump` as
+`none` and enter the tag. Give exactly one of `bump` and `tag`; the run fails otherwise.
 If the GitHub Release already exists, the DMG is replaced and the cask is refreshed
 with the new checksum.
 
@@ -128,9 +144,14 @@ bash scripts/notarize.sh build/Hidebar-0.2.0.dmg
 
 - Accessibility and Screen Recording grants are tied to the code signature. Because every
   release is signed with the same Developer ID, users keep their grants across updates.
-- The Release run builds the DMG with Xcode 27.1, like CI; keep `DEVELOPER_DIR` in both
-  workflows in sync.
+- The Release run builds the DMG with Xcode 27.0 and fails unless `xcodebuild -version`
+  reports exactly `XCODE_VERSION` and `XCODE_BUILD` from `release.yml`. That is a version and
+  build pin, not a beta detector: before raising it, confirm from the runner image notes that
+  the new Xcode is a GA release. `XCODE_BUILD` must be filled in with the GA build before the
+  first release. The CI `build-app` job uses the same toolchain; keep its `DEVELOPER_DIR` in
+  sync with `release.yml` (the other CI jobs run on 27.1).
 - If the run fails at "Update Homebrew tap" (for example, an expired `TAP_TOKEN`), the
-  release already holds a DMG the cask does not know. Fix the cause and re-run the whole
-  workflow for the tag: it rebuilds and replaces the DMG, then writes the new checksum to
+  release already holds a DMG the cask does not know. Fix the cause and start *Run workflow*
+  with that `tag` (not "Re-run all jobs": for a tag the bump created, the `tag` job would fail
+  on "already tagged"): it rebuilds and replaces the DMG, then writes the new checksum to
   the cask. Until then `brew install` fails its checksum check.

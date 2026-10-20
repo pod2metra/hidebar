@@ -7,7 +7,7 @@ cask "hidebar" do
   desc "Menu bar utility that hides menu bar icons behind a single separator"
   homepage "https://pod2metra.github.io/hidebar"
 
-  depends_on macos: ">= :sequoia"
+  depends_on macos: :sequoia
 
   app "Hidebar.app"
 

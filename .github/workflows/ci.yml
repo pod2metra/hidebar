@@ -21,9 +21,11 @@ concurrency:
 env:
   # HidebarKit/Package.swift declares swift-tools-version 6.4, which needs
   # Xcode 27. The macos-15 and macos-26 images ship Xcode 16.x / 26.x only, so
-  # every job runs on the `xcode-27` image (macOS 27, Xcode 27.0 default, 27.1
+  # every job runs on the `xcode-27` image (macOS 27, Xcode 27.0 GA default, 27.1
   # installed beside it). Pin 27.1 and select it through DEVELOPER_DIR so that
   # swift, xcrun (llvm-cov) and xcodebuild all resolve to the same toolchain.
+  # Test, coverage and lint tolerate the 27.1 RC; build-app overrides this with the 27.0 GA
+  # that release.yml ships with, so every push proves the release toolchain builds the app.
   DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
 
 jobs:
@@ -32,7 +34,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Show toolchain
         run: |
@@ -49,8 +51,10 @@ jobs:
     if: github.event_name != 'schedule'
     runs-on: xcode-27
     timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build Hidebar (unsigned)
         run: >
@@ -63,7 +67,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Muter
         run: brew install muter-mutation-testing/formulae/muter
