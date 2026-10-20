@@ -19,7 +19,8 @@ public enum MovePlanResult: Equatable, Sendable {
 ///
 /// Rules held here: an unmovable item gets no events at all; every attempt that posts events puts
 /// the cursor back where it was, whether or not the item moved; a layout is handed to
-/// `onConfirmed` only after the whole plan is confirmed by the items' own frames.
+/// `onConfirmed` only after the whole plan is confirmed by the items' own frames; user input is
+/// suppressed by the `InputGate` from the first drag until the plan ends, on every path.
 @MainActor
 public final class MoveExecutor {
     /// Extra attempts after the first one, so an item is dragged at most `maxRetries + 1` times.
@@ -31,15 +32,24 @@ public final class MoveExecutor {
     private let poster: any EventPosting
     private let locator: any ItemLocating
     private let clock: any MoveClock
+    private let inputGate: InputGate
 
-    public init(poster: any EventPosting, locator: any ItemLocating, clock: any MoveClock) {
+    /// `inputGate` is the one the event tap adapter consults; it has no default, so a composition
+    /// cannot leave rule 4 switched off by forgetting it.
+    public init(
+        poster: any EventPosting, locator: any ItemLocating, clock: any MoveClock,
+        inputGate: InputGate
+    ) {
         self.poster = poster
         self.locator = locator
         self.clock = clock
+        self.inputGate = inputGate
     }
 
     public func move(_ step: MoveStep) -> MoveOutcome {
         guard step.item.isMovable else { return .unmovable }
+        inputGate.begin()
+        defer { inputGate.end() }
         for _ in 0...Self.maxRetries {
             if attempt(step) { return .moved }
         }
@@ -51,6 +61,14 @@ public final class MoveExecutor {
     /// `onConfirmed` is called once, with `layout`, after the last step; it is the place to persist.
     /// An error it throws propagates: the items did move, but the layout was not saved.
     public func execute(
+        _ steps: [MoveStep], confirming layout: Layout, onConfirmed: (Layout) throws -> Void
+    ) rethrows -> MovePlanResult {
+        inputGate.begin()
+        defer { inputGate.end() }
+        return try run(steps, confirming: layout, onConfirmed: onConfirmed)
+    }
+
+    private func run(
         _ steps: [MoveStep], confirming layout: Layout, onConfirmed: (Layout) throws -> Void
     ) rethrows -> MovePlanResult {
         for (index, step) in steps.enumerated() {

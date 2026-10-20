@@ -33,7 +33,8 @@ import Testing
         }
         return SettingsViewModel(
             layout: try layout(), store: LayoutStore(store: store ?? backing),
-            executor: MoveExecutor(poster: bar, locator: bar, clock: bar), separator: separator,
+            executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: InputGate()),
+            separator: separator,
             barItems: { current })
     }
 

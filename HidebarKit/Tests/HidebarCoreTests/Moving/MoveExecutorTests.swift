@@ -8,7 +8,9 @@ private struct PersistError: Error, Equatable {}
     private let bar = MoveFakeBar()
     private let savedCursor = CursorPoint(x: 900, y: 500)
 
-    private var executor: MoveExecutor { MoveExecutor(poster: bar, locator: bar, clock: bar) }
+    private var executor: MoveExecutor {
+        MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: InputGate())
+    }
 
     /// Item at x 100..110, anchor at x 50..70, both 20 high: centre of the item is (105, 10).
     private func place(_ name: String, x: Double, width: Double = 10) {
