@@ -15,7 +15,10 @@ fi
 
 xcodebuild -project Hidebar.xcodeproj -scheme Hidebar -configuration Debug \
     -derivedDataPath build/dd -quiet \
-    CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$NAME" DEVELOPMENT_TEAM= build
+    CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$NAME" DEVELOPMENT_TEAM= \
+    ENABLE_HARDENED_RUNTIME=NO build
+# The hardened runtime's library validation rejects Hidebar.debug.dylib: a self-signed
+# identity has no Team ID. Ad-hoc builds run without the hardened runtime as well.
 
 # Any other copy (for example one built by Xcode into DerivedData) would hold a
 # different signature and look ungranted.
