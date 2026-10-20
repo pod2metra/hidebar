@@ -2,13 +2,13 @@ import CoreGraphics
 import Foundation
 import HidebarCore
 
-/// Drops the user's mouse events when the `InputGate` is closed. The tap runs on its own thread,
-/// as a move blocks the main one. No tap is created without Accessibility; `isActive` tells.
+/// Drops the user's mouse and keyboard events when the `InputGate` is closed. The tap runs on its
+/// own thread, as a move blocks the main one. No tap is created without Accessibility; `isActive` tells.
 public final class EventTapInputGate: @unchecked Sendable {
     private static let mask: CGEventMask = [
         CGEventType.leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown,
         .otherMouseUp, .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
-        .scrollWheel,
+        .scrollWheel, .keyDown, .keyUp, .flagsChanged,
     ].reduce(0) { $0 | (1 << CGEventMask($1.rawValue)) }
 
     let gate: InputGate
