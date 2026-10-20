@@ -26,56 +26,33 @@ public final class SeparatorController {
     public private(set) var state: SeparatorState = .shown
 
     private let item: any StatusItemControlling
-    private let clock: any SchedulingClock
-    private var autoHide: (any Cancellable)?
 
-    public init(item: any StatusItemControlling, clock: any SchedulingClock) {
+    public init(item: any StatusItemControlling) {
         self.item = item
-        self.clock = clock
     }
 
     /// Call first thing at launch: the previous run may have died while hiding.
     public func prepareForLaunch() {
         item.length = Self.normalLength
         item.isVisible = true
-        cancelAutoHide()
         state = .shown
     }
 
     /// Call first thing on termination: restoring the length precedes everything else.
     public func prepareForTermination() {
         item.length = Self.normalLength
-        cancelAutoHide()
         state = .shown
     }
 
     public func hide() {
-        cancelAutoHide()
         guard state == .shown else { return }
         item.length = Self.hidingLength
         state = .hiding
     }
 
-    /// Reveals the icons; with `autoHideAfter` they hide again after that many seconds.
-    public func show(autoHideAfter delay: TimeInterval? = nil) {
-        cancelAutoHide()
-        if state == .hiding {
-            item.length = Self.normalLength
-            state = .shown
-        }
-        guard let delay else { return }
-        autoHide = clock.schedule(after: delay) { [weak self] in self?.hide() }
-    }
-
-    public func toggle(autoHideAfter delay: TimeInterval? = nil) {
-        switch state {
-        case .shown: hide()
-        case .hiding: show(autoHideAfter: delay)
-        }
-    }
-
-    private func cancelAutoHide() {
-        autoHide?.cancel()
-        autoHide = nil
+    public func show() {
+        guard state == .hiding else { return }
+        item.length = Self.normalLength
+        state = .shown
     }
 }

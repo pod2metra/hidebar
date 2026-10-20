@@ -15,12 +15,4 @@ import Testing
         #expect(!OwnItems.isOwn(MenuBarItemID(ownerBundleID: OwnItems.bundleID + ".helper", title: "")))
         #expect(!OwnItems.isOwn(moveID("a")))
     }
-
-    @Test func foreignDropsEveryOwnItemIncludingTheSeparator() {
-        let items = [
-            discovered("a"), ownDiscovered(OwnItems.separatorTitle), discovered("b", managed: false),
-            ownDiscovered("toggle"),
-        ]
-        #expect(OwnItems.foreign(items) == [items[0], items[2]])
-    }
 }

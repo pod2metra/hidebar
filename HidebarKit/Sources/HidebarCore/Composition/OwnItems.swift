@@ -14,9 +14,4 @@ public enum OwnItems {
     public static func isOwn(_ id: MenuBarItemID) -> Bool {
         id.ownerBundleID == bundleID
     }
-
-    /// Items of other apps.
-    public static func foreign(_ items: [DiscoveredItem]) -> [DiscoveredItem] {
-        items.filter { !isOwn($0.item.id) }
-    }
 }

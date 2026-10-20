@@ -40,7 +40,7 @@ final class CompositionScene {
         })
 
     init() {
-        separator = SeparatorController(item: item, clock: timer)
+        separator = SeparatorController(item: item)
         bar.frames[OwnItems.separatorID] = ItemFrame(x: 0, y: 0, width: 20, height: 20)
         for (index, name) in ["a", "b", "c"].enumerated() {
             bar.frames[moveID(name)] = ItemFrame(x: 100 + Double(index) * 20, y: 0, width: 10, height: 20)

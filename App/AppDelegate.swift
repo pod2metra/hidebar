@@ -14,6 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller?.permissionsMayHaveChanged()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        controller?.reopened()
+        return false
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         controller?.stop()
     }

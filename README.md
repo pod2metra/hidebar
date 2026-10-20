@@ -114,7 +114,7 @@ by the checklist in `docs/MANUAL_TEST.md`.
 - Sequoia asks again for Screen Recording from time to time.
 - With ad-hoc signing macOS may forget the granted permissions after every rebuild.
 - macOS 15 is the minimum target; run the manual checklist on it (`docs/MANUAL_TEST.md`,
-  section 5) before relying on it.
+  check 6.2) before relying on it.
 
 ## Contributing
 

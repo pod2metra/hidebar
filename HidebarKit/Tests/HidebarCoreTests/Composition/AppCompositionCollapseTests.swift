@@ -53,6 +53,7 @@ import Testing
     @Test(
         arguments: [
             (nil, 200, CollapseRefusal.separatorNotOnBar),
+            (100, nil, .separatorNotOnBar),
             (100, 99, .arrowWouldHide),
         ] as [(Double?, Double?, CollapseRefusal)])
     func aRefusedCollapseWritesNothingAndKeepsTheIconsShown(

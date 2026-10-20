@@ -19,7 +19,7 @@ import Testing
         #expect(CollapseGuard.check(pipeX: 100, arrowX: 150) == nil)
     }
 
-    @Test func anArrowWithoutAFrameStrandsNothing() {
-        #expect(CollapseGuard.check(pipeX: 100, arrowX: nil) == nil)
+    @Test func anArrowWithoutAFrameIsRefused() {
+        #expect(CollapseGuard.check(pipeX: 100, arrowX: nil) == .separatorNotOnBar)
     }
 }

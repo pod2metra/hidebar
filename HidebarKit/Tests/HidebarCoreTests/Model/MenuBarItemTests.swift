@@ -26,7 +26,7 @@ import Testing
     @Test func itemKeepsAllFields() {
         let id = MenuBarItemID(ownerBundleID: "com.example.app", title: "Status")
         let frame = ItemFrame(x: 1, y: 2, width: 3, height: 4)
-        let item = MenuBarItem(id: id, frame: frame, isMovable: true, isHidable: false)
+        let item = MenuBarItem(id: id, frame: frame, isMovable: true)
         #expect(item.id == id)
         #expect(item.frame == frame)
         #expect(item.frame.x == 1)
@@ -34,15 +34,12 @@ import Testing
         #expect(item.frame.width == 3)
         #expect(item.frame.height == 4)
         #expect(item.isMovable)
-        #expect(!item.isHidable)
     }
 
     @Test func itemsDifferingInAnyFieldAreNotEqual() {
         let id = MenuBarItemID(ownerBundleID: "com.example.app", title: "Status")
         let frame = ItemFrame(x: 1, y: 2, width: 3, height: 4)
-        let item = MenuBarItem(id: id, frame: frame, isMovable: true, isHidable: true)
-        #expect(item == MenuBarItem(id: id, frame: frame, isMovable: true, isHidable: true))
-        #expect(item != MenuBarItem(id: id, frame: frame, isMovable: false, isHidable: true))
-        #expect(item != MenuBarItem(id: id, frame: frame, isMovable: true, isHidable: false))
-    }
+        let item = MenuBarItem(id: id, frame: frame, isMovable: true)
+        #expect(item == MenuBarItem(id: id, frame: frame, isMovable: true))
+        #expect(item != MenuBarItem(id: id, frame: frame, isMovable: false))    }
 }

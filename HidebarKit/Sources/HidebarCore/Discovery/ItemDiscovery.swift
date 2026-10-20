@@ -131,8 +131,7 @@ public struct ItemDiscovery: Sendable {
         let isManaged = candidate.isResolved && !isShared
         let id = candidate.id
         let isMovable = isManaged && !ItemDiscovery.unmovable.contains(id)
-        let item = MenuBarItem(
-            id: id, frame: candidate.window.frame, isMovable: isMovable, isHidable: isMovable)
+        let item = MenuBarItem(id: id, frame: candidate.window.frame, isMovable: isMovable)
         return DiscoveredItem(
             windowID: candidate.window.windowID, ownerPID: candidate.window.ownerPID, item: item,
             isManaged: isManaged)

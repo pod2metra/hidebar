@@ -5,8 +5,6 @@ public struct GroupPanelRow: Equatable {
         case snapshot(SnapshotImage)
         /// The app name and icon, drawn from the id's bundle; used without a snapshot.
         case appName
-        /// The icon is not in the current discovery, typically because it is hidden off-screen.
-        case unavailable
     }
 
     public let id: MenuBarItemID

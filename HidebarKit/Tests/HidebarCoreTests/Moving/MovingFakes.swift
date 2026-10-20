@@ -123,6 +123,5 @@ func moveID(_ name: String) -> MenuBarItemID {
 
 func moveItem(_ name: String, movable: Bool = true) -> MenuBarItem {
     MenuBarItem(
-        id: moveID(name), frame: ItemFrame(x: 0, y: 0, width: 10, height: 20), isMovable: movable,
-        isHidable: true)
+        id: moveID(name), frame: ItemFrame(x: 0, y: 0, width: 10, height: 20), isMovable: movable)
 }

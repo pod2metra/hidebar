@@ -93,7 +93,7 @@ public final class AppComposition {
         }
     }
 
-    /// Brings a displaced icon home. Call when a panel closes.
+    /// Brings a displaced icon home. The app calls it on quit.
     @discardableResult
     public func restoreIfDisplaced() -> RestoreOutcome {
         guard clickProxy.hasDisplacedItem else { return .nothingToRestore }

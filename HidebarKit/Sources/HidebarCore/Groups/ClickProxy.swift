@@ -125,7 +125,7 @@ public final class ClickProxy {
         return returnHome()
     }
 
-    /// Brings a displaced icon home now. The app calls it whenever a group panel opens or closes:
+    /// Brings a displaced icon home now. The app calls it before the next click and on quit:
     /// a restore that failed (on the timeout or on `menuDidClose()`) leaves the icon pending and
     /// refuses every further click, and nothing else would retry it. Does nothing when no icon is away.
     @discardableResult

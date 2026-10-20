@@ -11,7 +11,7 @@ public struct PermissionPrompt: Equatable, Sendable {
         case .accessibility:
             PermissionPrompt(
                 title: "Accessibility",
-                detail: "Lets Hidebar move icons and tell which app owns each one. Without it icons can only be hidden, not arranged.",
+                detail: "Lets Hidebar click the icons in the overflow strip and tell which app owns each one. Without it the section can only be collapsed and expanded, and the strip's icons are not clickable.",
                 settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         case .screenRecording:
             PermissionPrompt(

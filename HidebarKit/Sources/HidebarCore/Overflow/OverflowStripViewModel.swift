@@ -1,8 +1,8 @@
 /// Rows of the overflow strip: the icons that do not fit the menu bar, shown in a panel under it.
 ///
 /// Only the visible section takes part: the icons right of the separator, which are the ones the
-/// user wants on the bar. Hidden icons and the app's own items (the separator, the toggle, the
-/// group icons) never become rows, but the own ones take room on the bar and so count in the fit.
+/// user wants on the bar. Hidden icons and the app's own items (the separator and its arrow)
+/// never become rows, but the own ones take room on the bar and so count in the fit.
 ///
 /// Rows run left to right in bar order. Their widths and `spacing` are the single source for
 /// both the scroll content width and the visible range, and for where a view draws each row.

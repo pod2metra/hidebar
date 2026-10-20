@@ -32,7 +32,7 @@ import Testing
             windowID: windowID, ownerPID: 688,
             item: MenuBarItem(
                 id: moveID(name), frame: ItemFrame(x: x, y: 0, width: width, height: 20),
-                isMovable: movable, isHidable: movable),
+                isMovable: movable),
             isManaged: managed)
     }
 
@@ -117,7 +117,7 @@ import Testing
             windowID: 90, ownerPID: 688,
             item: MenuBarItem(
                 id: MenuBarItemID(ownerBundleID: OwnItems.bundleID, title: title),
-                frame: ItemFrame(x: x, y: 0, width: width, height: 20), isMovable: true, isHidable: true),
+                frame: ItemFrame(x: x, y: 0, width: width, height: 20), isMovable: true),
             isManaged: true)
     }
 
@@ -138,8 +138,8 @@ import Testing
 
     @Test func ownIconsTakeRoomOnTheBarButAreNotRows() async {
         let model = viewModel
-        // d and c fit in 80 points without the group icon; with it (30 wide) c no longer does.
-        await recompute(model, items: scene + [separator, own("Hidebar group", x: 240, width: 30)])
+        // d and c fit in 80 points without the arrow; with it (30 wide) c no longer does.
+        await recompute(model, items: scene + [separator, own("Hidebar arrow", x: 240, width: 30)])
         #expect(model.rows.map(\.id) == [moveID("a"), moveID("b"), moveID("c")])
         #expect(model.itemWidths == [30, 40, 30])
         #expect(model.spacing == 5)
@@ -166,7 +166,7 @@ import Testing
             windowID: 1, ownerPID: 688,
             item: MenuBarItem(
                 id: MenuBarItemID(ownerBundleID: "com.example.app", title: "Sync"),
-                frame: ItemFrame(x: 0, y: 0, width: 90, height: 20), isMovable: true, isHidable: true),
+                frame: ItemFrame(x: 0, y: 0, width: 90, height: 20), isMovable: true),
             isManaged: true)
         let model = viewModel
         await recompute(model, items: [titled, entry("u", x: 200, width: 90)], capabilities: none)

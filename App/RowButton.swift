@@ -1,7 +1,7 @@
 import AppKit
 import HidebarCore
 
-/// Draws one row of a group panel as a button; a row that cannot be clicked is disabled.
+/// Draws one row of the overflow strip as a button; a row that cannot be clicked is disabled.
 @MainActor
 enum RowButton {
     static func make(for row: GroupPanelRow) -> NSButton {
@@ -17,9 +17,6 @@ enum RowButton {
             button.title = row.name
             button.image = AppIcons.image(bundleID: row.id.ownerBundleID)
             button.imagePosition = .imageLeading
-        case .unavailable:
-            button.title = "\(row.name) (not on the bar)"
-            button.imagePosition = .noImage
         }
         return button
     }

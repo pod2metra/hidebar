@@ -108,7 +108,6 @@ import Testing
         let result = try #require(discover([source]).first)
         #expect(!result.isManaged)
         #expect(!result.item.isMovable)
-        #expect(!result.item.isHidable)
         #expect(result.item.id == itemID(controlCenter))
     }
 
@@ -140,9 +139,7 @@ import Testing
         ]
         let result = discover(rows, owners: owners)
         #expect(result.map(\.isManaged) == [false, false, true])
-        #expect(result.map(\.item.isMovable) == [false, false, true])
-        #expect(result.map(\.item.isHidable) == [false, false, true])
-    }
+        #expect(result.map(\.item.isMovable) == [false, false, true])    }
 
     @Test func sameTitleInDifferentBundlesIsNotACollision() {
         let owners = [
@@ -167,7 +164,6 @@ import Testing
         let result = try #require(discover([source]).first)
         #expect(!result.isManaged)
         #expect(!result.item.isMovable)
-        #expect(!result.item.isHidable)
         #expect(result.item.id == itemID("com.apple.systemuiserver"))
     }
 
@@ -176,7 +172,6 @@ import Testing
         let result = try #require(discover([source]).first)
         #expect(!result.isManaged)
         #expect(!result.item.isMovable)
-        #expect(!result.item.isHidable)
     }
 
     @Test func sameThirdPartyAppWithAccessibilityIsManaged() throws {
@@ -185,7 +180,6 @@ import Testing
         let result = try #require(discover([source], owners: [21: owner]).first)
         #expect(result.isManaged)
         #expect(result.item.isMovable)
-        #expect(result.item.isHidable)
     }
 
     @Test func unresolvedWindowDoesNotDemoteResolvedItemWithTheSameID() {
@@ -194,7 +188,7 @@ import Testing
         #expect(discover(rows, owners: owners).map(\.isManaged) == [true, false])
     }
 
-    // MARK: unmovable and unhidable system items
+    // MARK: unmovable system items
 
     /// Identities as Accessibility reports them: Control Center's items by `AXIdentifier`, Siri
     /// by its title.
@@ -203,12 +197,11 @@ import Testing
         (controlCenter, "com.apple.menuextra.controlcenter"),
         ("com.apple.systemuiserver", "Siri"),
     ])
-    func systemItemIsManagedButNeitherMovableNorHidable(bundle: String, title: String) throws {
+    func systemItemIsManagedButNotMovable(bundle: String, title: String) throws {
         let owners = [1: ItemOwner(bundleID: bundle, title: title)]
         let result = try #require(discover([window(1, x: 10)], owners: owners).first)
         #expect(result.isManaged)
         #expect(!result.item.isMovable)
-        #expect(!result.item.isHidable)
     }
 
     @Test(arguments: [
@@ -217,10 +210,9 @@ import Testing
         ("com.apple.Spotlight", "Spotlight"), ("com.example.app", "Siri"),
         ("com.example.app", "com.apple.menuextra.clock"), (controlCenter, "Siri"),
     ])
-    func otherItemsAreMovableAndHidable(bundle: String, title: String) throws {
+    func otherItemsAreMovable(bundle: String, title: String) throws {
         let owners = [1: ItemOwner(bundleID: bundle, title: title)]
         let result = try #require(discover([window(1, x: 10)], owners: owners).first)
         #expect(result.item.isMovable)
-        #expect(result.item.isHidable)
     }
 }

@@ -7,7 +7,7 @@ import Testing
         let prompt = PermissionPrompt.prompt(for: .accessibility)
         #expect(prompt.title == "Accessibility")
         #expect(prompt.settingsURL.hasSuffix("Privacy_Accessibility"))
-        #expect(prompt.detail.contains("arranged"))
+        #expect(prompt.detail.contains("not clickable"))
     }
 
     @Test func screenRecordingPointsAtItsPrivacyPane() {

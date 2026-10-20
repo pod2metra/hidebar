@@ -49,6 +49,13 @@ final class AppController: NSObject {
         strip.barDidChange()
     }
 
+    /// The user launched the app again (Finder, Spotlight), typically because the arrow is out of
+    /// reach: everything comes back.
+    func reopened() {
+        services.composition.expand()
+        services.separatorItems.showArrow(collapsed: false)
+    }
+
     /// Collapses or expands the section. The core refuses to collapse when that would strand the
     /// arrow; the section then stays expanded.
     private func arrowClicked() {

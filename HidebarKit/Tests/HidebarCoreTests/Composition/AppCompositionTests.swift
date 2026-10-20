@@ -3,15 +3,6 @@ import Testing
 
 @testable import HidebarCore
 
-func ownDiscovered(_ title: String, x: Double = 0, windowID: Int = 90) -> DiscoveredItem {
-    DiscoveredItem(
-        windowID: windowID, ownerPID: 688,
-        item: MenuBarItem(
-            id: MenuBarItemID(ownerBundleID: OwnItems.bundleID, title: title),
-            frame: ItemFrame(x: x, y: 0, width: 10, height: 20), isMovable: true, isHidable: true),
-        isManaged: true)
-}
-
 @MainActor @Suite struct AppCompositionTests {
     private let scene = CompositionScene()
 

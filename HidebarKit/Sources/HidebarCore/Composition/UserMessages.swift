@@ -32,7 +32,7 @@ public enum UserMessages {
     public static func text(for refusal: CollapseRefusal) -> String {
         switch refusal {
         case .separatorNotOnBar:
-            "Hidebar's separator is not on the menu bar, so the icons were left shown."
+            "Hidebar's separator or arrow is not on the menu bar, so the icons were left shown."
         case .arrowWouldHide:
             "Hidebar's arrow is left of the separator and would be hidden with the icons, and you could not show them again. Drag the arrow to the right of the separator, then try again."
         }

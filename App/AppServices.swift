@@ -9,7 +9,7 @@ final class AppServices {
     let snapshotter = SCKSnapshotter()
     /// App names for everything the user reads; identities stay bundle ids.
     let names = ItemNames(apps: WorkspaceAppNames())
-    let separatorItems = SeparatorItems(clock: DispatchSchedulingClock())
+    let separatorItems = SeparatorItems()
     let composition: AppComposition
     /// Items on the bar as they are now, with no reveal; the overflow strip reads the visible side.
     let discovery: ItemDiscovery

@@ -17,14 +17,14 @@ final class SeparatorItems {
     private let arrow: NSStatusItemAdapter
     private var targets: [ButtonTarget] = []
 
-    init(clock: any SchedulingClock) {
+    init() {
         // Everything left of the pipe can be hidden, so the arrow must be right of it: the
         // positions are written before the items are created.
         StatusItemSeeding().seedFixedItems()
         pipe = NSStatusItemAdapter(autosaveName: AutosaveNames.separator)
         arrow = NSStatusItemAdapter(
             autosaveName: AutosaveNames.toggle, symbolName: SeparatorState.shown.arrowSymbolName)
-        controller = SeparatorController(item: pipe, clock: clock)
+        controller = SeparatorController(item: pipe)
         controller.prepareForLaunch()
         SeparatorMark.apply(to: pipe.item)
         arrow.item.button?.setAccessibilityTitle("Hidebar arrow")

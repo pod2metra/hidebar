@@ -39,6 +39,7 @@ it. Everything left of the pipe is what the arrow hides.
 | 2.5 | Hold Command and drag the arrow to the left of the pipe, then click the arrow | The icons stay shown and a message says the arrow would be hidden with them; nothing is hidden. Drag the arrow back to the right of the pipe: the click collapses | |
 | 2.6 | Hold Command and drag an icon from the right of the pipe to its left while collapsed, then expand | The icon goes off-screen with the others and comes back on expand | |
 | 2.7 | Hold Command and drag an icon from the left of the pipe to its right | The icon stays visible while collapsed | |
+| 2.8 | Collapse, then open Hidebar again from Finder or Spotlight | The section expands and the arrow points right | |
 
 ## 3. Menu and help
 

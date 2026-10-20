@@ -40,8 +40,7 @@ func managed(_ item: MenuBarItemID, windowID: Int = 1) -> DiscoveredItem {
     DiscoveredItem(
         windowID: windowID, ownerPID: 688,
         item: MenuBarItem(
-            id: item, frame: ItemFrame(x: 0, y: 0, width: 46, height: 24), isMovable: true,
-            isHidable: true),
+            id: item, frame: ItemFrame(x: 0, y: 0, width: 46, height: 24), isMovable: true),
         isManaged: true)
 }
 
@@ -49,7 +48,6 @@ func unmanaged(_ item: MenuBarItemID, windowID: Int = 1) -> DiscoveredItem {
     DiscoveredItem(
         windowID: windowID, ownerPID: 688,
         item: MenuBarItem(
-            id: item, frame: ItemFrame(x: 0, y: 0, width: 46, height: 24), isMovable: false,
-            isHidable: false),
+            id: item, frame: ItemFrame(x: 0, y: 0, width: 46, height: 24), isMovable: false),
         isManaged: false)
 }
