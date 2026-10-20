@@ -87,3 +87,4 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 7.1 | macOS 26 | All sections above | |
 | 7.2 | macOS 15 (minimum target) | Sections 1–5 | |
 | 7.3 | Two displays | Only the main display's menu bar items are listed and moved | |
+| 7.4 | A second display arranged to the LEFT of the main one, top edges aligned | Known limitation: its copies of the icons look like hidden items; they stay unmanaged (never saved or moved) but may show as non-clickable duplicates in the overflow strip | |
