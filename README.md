@@ -121,4 +121,4 @@ edit `Hidebar.xcodeproj/project.pbxproj` by hand (see `docs/XCODE_SETUP.md`).
 
 ## License
 
-License: TBD
+MIT — see [LICENSE](LICENSE).
