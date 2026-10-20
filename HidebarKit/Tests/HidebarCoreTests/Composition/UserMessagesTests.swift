@@ -20,13 +20,13 @@ import Testing
         let text = UserMessages.text(for: .moveStopped(stepIndex: 1, item: item, outcome: .failed))
         #expect(text.contains("Step 2"))
         #expect(text.contains("Status"))
-        #expect(text.contains("did not move"))
+        #expect(text.contains("did not end up in place"))
         #expect(text.contains("Nothing was saved"))
     }
 
     @Test func eachMoveOutcomeHasItsOwnWording() {
         let words = [MoveOutcome.moved, .unmovable, .failed].map { UserMessages.text(for: $0) }
-        #expect(words == ["moved", "cannot be moved", "did not move"])
+        #expect(words == ["moved", "cannot be moved", "did not end up in place"])
     }
 
     @Test func aSuccessfulClickNeedsNoMessage() {

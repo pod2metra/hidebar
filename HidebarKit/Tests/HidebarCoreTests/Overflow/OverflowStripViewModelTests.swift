@@ -6,9 +6,19 @@ import Testing
 /// right is a (30 wide), b (40), c (30), d (30); from the right d and c fit (65), b does not.
 /// The strip holds a, b: content 30 + 5 + 40 = 75.
 @MainActor @Suite struct OverflowStripViewModelTests {
-    private let bar = MoveFakeBar()
+    /// Stands in for the action the app passes to click an icon.
+    @MainActor private final class ClickLog {
+        private(set) var ids: [MenuBarItemID] = []
+        var outcome = ClickOutcome.clicked
+
+        func click(_ id: MenuBarItemID) -> ClickOutcome {
+            ids.append(id)
+            return outcome
+        }
+    }
+
+    private let clicks = ClickLog()
     private let snapshotter = FakeSnapshotter()
-    private let timer = ManualClock()
     private let full = PermissionsState(accessibility: true, screenRecording: true).capabilities
     private let accessibilityOnly = PermissionsState(accessibility: true, screenRecording: false).capabilities
     private let none = PermissionsState(accessibility: false, screenRecording: false).capabilities
@@ -34,12 +44,7 @@ import Testing
     }
 
     private var viewModel: OverflowStripViewModel {
-        let gate = InputGate()
-        let executor = MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
-        let proxy = ClickProxy(
-            executor: executor, poster: bar, locator: bar, separator: moveID("sep"), revealSide: .rightOf,
-            clock: timer, inputGate: gate)
-        return OverflowStripViewModel(snapshotter: snapshotter, clickProxy: proxy)
+        OverflowStripViewModel(snapshotter: snapshotter, click: { [clicks] in clicks.click($0) })
     }
 
     private func recompute(
@@ -233,24 +238,21 @@ import Testing
 
     // MARK: click
 
-    private func arrangeBar() {
-        bar.frames[moveID("sep")] = ItemFrame(x: 0, y: 0, width: 20, height: 20)
-        for found in scene { bar.frames[found.item.id] = found.item.frame }
-        bar.onWait = { [bar] count in
-            if count == 1 { bar.frames[moveID("a")] = ItemFrame(x: 22, y: 0, width: 30, height: 20) }
-        }
-    }
-
-    @Test func clickingAClickableRowGoesThroughTheProxyAtTheRevealedIcon() async {
-        arrangeBar()
+    @Test func clickingAClickableRowClicksItsIconThroughTheInjectedAction() async {
         let model = viewModel
         await recompute(model)
-        #expect(model.click(rowAt: 0) == .clicked)
-        #expect(bar.clicks == [CursorPoint(x: 37, y: 10)])
+        #expect(model.click(rowAt: 1) == .clicked)
+        #expect(clicks.ids == [moveID("b")])
     }
 
-    @Test func clickOnAnUnclickableOrMissingRowPostsNothing() async {
-        arrangeBar()
+    @Test func theOutcomeOfTheActionIsPassedOn() async {
+        clicks.outcome = .revealFailed
+        let model = viewModel
+        await recompute(model)
+        #expect(model.click(rowAt: 0) == .revealFailed)
+    }
+
+    @Test func clickOnAnUnclickableOrMissingRowClicksNothing() async {
         let model = viewModel
         await recompute(model, items: scene + [entry("pinned", x: 20, width: 90, movable: false)])
         let pinned = model.rows.firstIndex { $0.id == moveID("pinned") }
@@ -258,15 +260,7 @@ import Testing
         #expect(model.click(rowAt: pinned ?? 0) == nil)
         #expect(model.click(rowAt: model.rows.count) == nil)
         #expect(model.click(rowAt: -1) == nil)
-        #expect(bar.log.isEmpty)
-    }
-
-    @Test func clickUsesTheItemsOfTheLatestRecompute() async {
-        arrangeBar()
-        let model = viewModel
-        await recompute(model, items: [])
-        await recompute(model)
-        #expect(model.click(rowAt: 0) == .clicked)
+        #expect(clicks.ids.isEmpty)
     }
 
     // MARK: snapshots

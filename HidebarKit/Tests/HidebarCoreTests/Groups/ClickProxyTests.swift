@@ -14,6 +14,7 @@ import Testing
     ]
 
     init() {
+        gate = InputGate(uptime: bar.uptime.reader)
         place("sep", x: 0, width: 20)
         place("a", x: 100)
         place("b", x: 120)
@@ -21,7 +22,7 @@ import Testing
     }
 
     private let timer = ManualClock()
-    private let gate = InputGate()
+    private let gate: InputGate
 
     private var executor: MoveExecutor {
         MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
@@ -33,7 +34,8 @@ import Testing
     ) -> ClickProxy {
         ClickProxy(
             executor: executor, poster: bar, locator: locator ?? bar, separator: moveID("sep"),
-            revealSide: revealSide, clock: timer, inputGate: gate, restoreTimeout: timeout)
+            revealSide: revealSide, clock: timer, inputGate: gate, isMenuOpen: { false },
+            restoreTimeout: timeout)
     }
 
     private func place(_ name: String, x: Double, width: Double = 10) {
@@ -250,6 +252,18 @@ import Testing
 
     @Test func gateIsReleasedWhenTheRevealFails() {
         #expect(proxy().click(moveID("a"), among: all) == .revealFailed)
+        #expect(!gate.suppressUserInput)
+    }
+
+    @Test func clickIsNotPostedOnceTheGateHasRunOutAndTheItemStaysPendingForTheNextTry() {
+        bar.onWait = { [bar] count in
+            bar.uptime.advance(by: InputGate.defaultMaxSuppressionMilliseconds)
+            if count == 1 { bar.frames[moveID("a")] = ItemFrame(x: 22, y: 0, width: 10, height: 20) }
+        }
+        let proxy = proxy()
+        #expect(proxy.click(moveID("a"), among: all) == .clickFailed)
+        #expect(bar.clicks.isEmpty)
+        #expect(proxy.hasDisplacedItem)
         #expect(!gate.suppressUserInput)
     }
 

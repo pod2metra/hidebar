@@ -38,14 +38,9 @@ import Testing
             barItems: { current })
     }
 
-    /// Every wait shifts every item, so each drag is confirmed on its first poll.
+    /// Every drag lands where it was released, so each is confirmed on its first poll.
     private func confirmEveryDrag() {
-        bar.onWait = { [bar] _ in
-            for (id, frame) in bar.frames {
-                bar.frames[id] = ItemFrame(
-                    x: frame.x + 1, y: frame.y, width: frame.width, height: frame.height)
-            }
-        }
+        bar.dragsLand = true
     }
 
     private func storedLayout() throws -> Layout? {

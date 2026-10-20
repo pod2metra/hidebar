@@ -2,14 +2,15 @@ import Foundation
 
 @testable import HidebarCore
 
-/// The parts `AppComposition` wires together, on fakes that share one bar: separator `sep` at
+/// The parts `AppComposition` wires together, on fakes that share one bar: the separator at
 /// x 0..20, then `a`, `b`, `c` (10 wide) at x 100, 120, 140. Revealing `a` drops it at x 22.
 @MainActor
 final class CompositionScene {
     let item = FakeStatusItem()
     let timer = ManualClock()
     let bar = MoveFakeBar()
-    let gate = InputGate()
+    /// Whether a menu is open; closed unless a test says otherwise.
+    let menu = FakeMenuProbe()
     let backing = InMemoryStore()
     let separator: SeparatorController
 
@@ -18,19 +19,20 @@ final class CompositionScene {
     /// `item.length` at every discovery and at every wait of the bar.
     private(set) var lengthAtDiscovery: [Double] = []
     private(set) var lengthAtWaits: [Double] = []
-    private var scripts: [Int: [(name: String, x: Double)]] = [:]
-    private var shiftsEveryWait = false
+    private var scripts: [Int: [(id: MenuBarItemID, x: Double)]] = [:]
 
     var normal: Double { SeparatorController.normalLength }
     var hiding: Double { SeparatorController.hidingLength }
 
+    private(set) lazy var gate = InputGate(uptime: bar.uptime.reader)
+
     private(set) lazy var proxy = ClickProxy(
         executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate),
-        poster: bar, locator: bar, separator: moveID("sep"), revealSide: .rightOf, clock: timer,
-        inputGate: gate)
+        poster: bar, locator: bar, separator: OwnItems.separatorID, revealSide: .rightOf, clock: timer,
+        inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() })
 
     private(set) lazy var composition = AppComposition(
-        separator: separator, clickProxy: proxy, clock: bar,
+        separator: separator, clickProxy: proxy, clock: bar, locator: bar, uptime: bar.uptime.reader,
         discover: { [unowned self] in
             lengthAtDiscovery.append(item.length)
             return found
@@ -38,7 +40,7 @@ final class CompositionScene {
 
     init() {
         separator = SeparatorController(item: item, clock: timer)
-        bar.frames[moveID("sep")] = ItemFrame(x: 0, y: 0, width: 20, height: 20)
+        bar.frames[OwnItems.separatorID] = ItemFrame(x: 0, y: 0, width: 20, height: 20)
         for (index, name) in ["a", "b", "c"].enumerated() {
             bar.frames[moveID(name)] = ItemFrame(x: 100 + Double(index) * 20, y: 0, width: 10, height: 20)
         }
@@ -49,30 +51,32 @@ final class CompositionScene {
         bar.onWait = { [unowned self] count in
             lengthAtWaits.append(item.length)
             for move in scripts[count] ?? [] {
-                place(move.name, x: move.x)
+                place(move.id, x: move.x)
             }
-            if shiftsEveryWait { shiftEveryItem() }
         }
     }
 
     /// Wait number `count` since creation moves item `name` to `x`.
     func script(wait count: Int, moves name: String, to x: Double) {
-        scripts[count, default: []].append((name, x))
+        scripts[count, default: []].append((moveID(name), x))
     }
 
-    /// Every wait shifts every item, so each drag is confirmed on its first poll.
+    /// Wait number `count` since creation moves the separator to `x`.
+    func script(wait count: Int, movesSeparatorTo x: Double) {
+        scripts[count, default: []].append((OwnItems.separatorID, x))
+    }
+
+    /// Every drag lands where it was released, so each is confirmed on its first poll.
     func confirmEveryDrag() {
-        shiftsEveryWait = true
+        bar.dragsLand = true
     }
 
     func place(_ name: String, x: Double) {
-        guard let old = bar.frames[moveID(name)] else { return }
-        bar.frames[moveID(name)] = ItemFrame(x: x, y: old.y, width: old.width, height: old.height)
+        place(moveID(name), x: x)
     }
 
-    private func shiftEveryItem() {
-        for (id, frame) in bar.frames {
-            bar.frames[id] = ItemFrame(x: frame.x + 1, y: frame.y, width: frame.width, height: frame.height)
-        }
+    private func place(_ id: MenuBarItemID, x: Double) {
+        guard let old = bar.frames[id] else { return }
+        bar.frames[id] = ItemFrame(x: x, y: old.y, width: old.width, height: old.height)
     }
 }

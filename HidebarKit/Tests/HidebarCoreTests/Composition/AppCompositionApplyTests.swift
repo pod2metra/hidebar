@@ -3,13 +3,12 @@ import Testing
 
 @testable import HidebarCore
 
-/// A bar that really reorders: items sit 20 points apart, 10 wide, in `order`. A Command-down
-/// picks the item under the cursor, a Command-up drops it beside the item under the cursor
-/// (left half: before it, the right edge: after it).
+/// A bar that really reorders: items sit 20 points apart, 10 wide, in `order`. A drag picks the
+/// item under its start and drops it beside the item under its end (left half: before it, the
+/// right edge: after it).
 @MainActor
 private final class OrderingBar: EventPosting, ItemLocating, MoveClock {
     var order: [MenuBarItemID]
-    private var held: MenuBarItemID?
 
     init(order: [MenuBarItemID]) {
         self.order = order
@@ -28,17 +27,14 @@ private final class OrderingBar: EventPosting, ItemLocating, MoveClock {
     func postClick(at point: CursorPoint) -> Bool { true }
     func wait(milliseconds: Int) {}
 
-    func postCommandMouseDown(at point: CursorPoint) {
-        held = item(at: point.x)
-    }
-
-    func postCommandMouseUp(at point: CursorPoint) {
-        guard let moved = held, let anchor = item(at: point.x), anchor != moved,
+    func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool {
+        guard let moved = item(at: start.x), let anchor = item(at: end.x), anchor != moved,
             let anchorFrame = frame(of: anchor)
-        else { return }
+        else { return true }
         order.removeAll { $0 == moved }
         let at = order.firstIndex(of: anchor) ?? 0
-        order.insert(moved, at: point.x == anchorFrame.x ? at : at + 1)
+        order.insert(moved, at: end.x == anchorFrame.x ? at : at + 1)
+        return true
     }
 }
 
@@ -72,7 +68,9 @@ private final class OrderingBar: EventPosting, ItemLocating, MoveClock {
             layout: try Layout(visible: [moveID("a")], hidden: [moveID("b")], groups: []))
         // Apply: settle is wait 3, the return of `a` polls at wait 4.
         scene.script(wait: 4, moves: "a", to: 110)
-        scene.confirmEveryDrag()
+        // The plan drops `b` left of `a` (wait 5), then `a` right of the separator at 60 (wait 6).
+        scene.script(wait: 5, moves: "b", to: 40)
+        scene.script(wait: 6, moves: "a", to: 65)
 
         #expect(scene.composition.apply(model) == nil)
 
@@ -112,9 +110,9 @@ private final class OrderingBar: EventPosting, ItemLocating, MoveClock {
         let executor = MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate)
         let proxy = ClickProxy(
             executor: executor, poster: bar, locator: bar, separator: separatorID, revealSide: .rightOf,
-            clock: ManualClock(), inputGate: gate)
+            clock: ManualClock(), inputGate: gate, isMenuOpen: { false })
         let composition = AppComposition(
-            separator: separator, clickProxy: proxy, clock: bar,
+            separator: separator, clickProxy: proxy, clock: bar, locator: bar,
             discover: { [bar] in
                 bar.order.map { id in
                     DiscoveredItem(

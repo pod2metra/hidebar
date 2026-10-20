@@ -1,7 +1,7 @@
 import CoreGraphics
 import HidebarCore
 
-/// Posts real Command-clicks. Every event carries `InputGate.syntheticEventTag`, so the input
+/// Posts real mouse events. Every event carries `InputGate.syntheticEventTag`, so the input
 /// gate lets it pass and drops the user's own input.
 @MainActor
 public struct CGEventPoster: EventPosting {
@@ -16,20 +16,21 @@ public struct CGEventPoster: EventPosting {
         CGWarpMouseCursorPosition(CGPoint(x: point.x, y: point.y))
     }
 
-    public func postCommandMouseDown(at point: CursorPoint) {
-        post(.leftMouseDown, at: point)
+    /// Nothing is posted unless both halves of the drag could be created.
+    public func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool {
+        let events = [
+            event(.leftMouseDown, at: start, flags: .maskCommand),
+            event(.leftMouseUp, at: end, flags: .maskCommand),
+        ]
+        return AllOrNothing.deliver(events) { $0.post(tap: .cghidEventTap) }
     }
 
-    public func postCommandMouseUp(at point: CursorPoint) {
-        post(.leftMouseUp, at: point)
-    }
-
-    private func post(_ type: CGEventType, at point: CursorPoint) {
+    func event(_ type: CGEventType, at point: CursorPoint, flags: CGEventFlags) -> CGEvent? {
         let event = CGEvent(
             mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
             mouseCursorPosition: CGPoint(x: point.x, y: point.y), mouseButton: .left)
-        event?.flags = .maskCommand
+        event?.flags = flags
         event?.setIntegerValueField(.eventSourceUserData, value: InputGate.syntheticEventTag)
-        event?.post(tap: .cghidEventTap)
+        return event
     }
 }

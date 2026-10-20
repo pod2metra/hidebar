@@ -70,6 +70,16 @@ private struct PersistError: Error, Equatable {}
         #expect(bar.cursor == savedCursor)
     }
 
+    @Test func dragThatCouldNotBePostedFailsEachAttemptWithoutPollingAndKeepsTheCursor() {
+        scene()
+        bar.dragPosts = false
+        #expect(executor.move(step()) == .failed)
+        #expect(bar.waits == 0)
+        #expect(bar.downs.isEmpty)
+        #expect(bar.restores == [savedCursor, savedCursor, savedCursor])
+        #expect(bar.cursor == savedCursor)
+    }
+
     @Test func itemThatMovesOnTheSecondAttemptStopsRetrying() {
         scene()
         moveOnWait(11)
@@ -145,8 +155,9 @@ private struct PersistError: Error, Equatable {}
         scene()
         place("second", x: 120)
         bar.onWait = { [bar] count in
-            let target = count == 1 ? "item" : "second"
-            bar.frames[moveID(target)] = ItemFrame(x: 40, y: 0, width: 10, height: 20)
+            // `item` lands right of the anchor (50..70), `second` left of it.
+            let target = count == 1 ? ("item", 75.0) : ("second", 40.0)
+            bar.frames[moveID(target.0)] = ItemFrame(x: target.1, y: 0, width: 10, height: 20)
         }
         let second = MoveStep(item: moveItem("second"), anchor: moveID("anchor"), side: .leftOf)
         var persisted: [(layout: Layout, downsSoFar: Int)] = []

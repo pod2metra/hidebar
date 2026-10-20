@@ -18,22 +18,29 @@ public enum ApplyRefusal: Equatable, Sendable {
 /// The app's own status items are kept out of the layout and out of move plans (`OwnItems`).
 @MainActor
 public final class AppComposition {
-    /// Time the bar needs after the separator changes length before the icons are where they
-    /// will be read from.
-    public static let settleMilliseconds = 150
+    /// Gap between two reads of the separator's frame while the bar re-lays out.
+    public static let settlePollMilliseconds = 25
+    /// The longest the bar is given to settle; after that the icons are read where they are.
+    public static let settleDeadlineMilliseconds = 1000
 
     private let separator: SeparatorController
     private let clickProxy: ClickProxy
     private let clock: any MoveClock
+    private let locator: any ItemLocating
+    private let uptime: Uptime
     private let discover: @MainActor () -> [DiscoveredItem]
 
+    /// `locator` reads the separator's frame to tell when the bar has settled.
     public init(
         separator: SeparatorController, clickProxy: ClickProxy, clock: any MoveClock,
+        locator: any ItemLocating, uptime: @escaping Uptime = systemUptimeMilliseconds,
         discover: @escaping @MainActor () -> [DiscoveredItem]
     ) {
         self.separator = separator
         self.clickProxy = clickProxy
         self.clock = clock
+        self.locator = locator
+        self.uptime = uptime
         self.discover = discover
         // The proxy's own timeout restore would drag towards an off-screen anchor.
         clickProxy.onRestoreTimeout = { [weak self] in self?.restoreIfDisplaced() }
@@ -44,9 +51,27 @@ public final class AppComposition {
     public func withRevealed<Result>(_ body: () -> Result) -> Result {
         guard separator.state == .hiding else { return body() }
         separator.show()
-        clock.wait(milliseconds: Self.settleMilliseconds)
+        awaitSettledBar()
         defer { separator.hide() }
         return body()
+    }
+
+    /// The bar has settled once the separator's frame is the same in two reads in a row. An
+    /// unreadable frame counts as a frame: without Accessibility there is nothing to wait for.
+    private func awaitSettledBar() {
+        let deadline = uptime() + Self.settleDeadlineMilliseconds
+        var frame = locator.frame(of: OwnItems.separatorID)
+        while uptime() < deadline {
+            clock.wait(milliseconds: Self.settlePollMilliseconds)
+            if !separatorMoved(from: &frame) { return }
+        }
+    }
+
+    /// Reads the separator's frame again into `frame`; true when it differs from the previous one.
+    private func separatorMoved(from frame: inout ItemFrame?) -> Bool {
+        let current = locator.frame(of: OwnItems.separatorID)
+        defer { frame = current }
+        return current != frame
     }
 
     /// Every item on the bar, hidden ones included, for a group panel to match its rows against.

@@ -44,6 +44,60 @@ import Testing
         #expect(gate.suppressUserInput)
     }
 
+    // MARK: total bound
+
+    private func boundedGate(_ time: TestUptime) -> InputGate {
+        InputGate(maxSuppressionMilliseconds: 100, uptime: time.reader)
+    }
+
+    @Test func gateLetsUserInputThroughOnceTheOutermostBeginIsOlderThanTheBound() {
+        let time = TestUptime()
+        let gate = boundedGate(time)
+        gate.begin()
+        time.advance(by: 99)
+        #expect(gate.suppressUserInput)
+        #expect(!gate.isOverdue)
+
+        time.advance(by: 1)
+        #expect(!gate.suppressUserInput)
+        #expect(gate.isOverdue)
+        #expect(gate.shouldPass(isSynthetic: false))
+    }
+
+    @Test func aNestedBeginDoesNotRestartTheClock() {
+        let time = TestUptime()
+        let gate = boundedGate(time)
+        gate.begin()
+        time.advance(by: 60)
+        gate.begin()
+        time.advance(by: 40)
+        #expect(gate.isOverdue)
+        gate.end()
+        #expect(gate.isOverdue)
+    }
+
+    @Test func endingAnOverdueGateClosesItAndTheNextBeginStartsFresh() {
+        let time = TestUptime()
+        let gate = boundedGate(time)
+        gate.begin()
+        time.advance(by: 500)
+        gate.end()
+        #expect(!gate.isOverdue)
+        #expect(!gate.suppressUserInput)
+
+        gate.begin()
+        #expect(gate.suppressUserInput)
+        #expect(!gate.isOverdue)
+    }
+
+    @Test func aGateThatWasNeverBegunIsNeverOverdue() {
+        let time = TestUptime()
+        let gate = boundedGate(time)
+        time.advance(by: 10_000)
+        #expect(!gate.isOverdue)
+        #expect(!gate.suppressUserInput)
+    }
+
     @Test func onlyTheAppTagMarksAnEventSynthetic() {
         #expect(InputGate.isSynthetic(userData: InputGate.syntheticEventTag))
         #expect(!InputGate.isSynthetic(userData: 0))

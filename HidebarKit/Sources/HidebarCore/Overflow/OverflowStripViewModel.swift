@@ -29,13 +29,16 @@ public final class OverflowStripViewModel {
     }
 
     private let snapshotter: any Snapshotting
-    private let clickProxy: ClickProxy
-    private var items: [DiscoveredItem] = []
+    private let clickIcon: @MainActor (MenuBarItemID) -> ClickOutcome
     private var generation = 0
 
-    public init(snapshotter: any Snapshotting, clickProxy: ClickProxy) {
+    /// `click` is how an icon gets clicked; the app passes `AppComposition.click`, so every click
+    /// from the strip is made with the separator revealed and the icon put back afterwards.
+    public init(
+        snapshotter: any Snapshotting, click: @escaping @MainActor (MenuBarItemID) -> ClickOutcome
+    ) {
         self.snapshotter = snapshotter
-        self.clickProxy = clickProxy
+        self.clickIcon = click
     }
 
     /// Rebuilds the rows at once, keeping the scroll offset within the new content, then upgrades
@@ -46,7 +49,6 @@ public final class OverflowStripViewModel {
     ) async {
         generation += 1
         let mine = generation
-        self.items = items
         let rightToLeft = Self.rightToLeft(Self.visibleSection(items))
         let overflow = screen.partition(itemWidths: rightToLeft.map(Self.width)).overflow
         let strip = rightToLeft[overflow].reversed().filter(Self.isForeign)
@@ -64,11 +66,11 @@ public final class OverflowStripViewModel {
         scrollModel.apply(deltaX: input.offsetDelta)
     }
 
-    /// Clicks the icon of row `index` through the proxy. Nil when there is no such row or the row
-    /// is not clickable: no event is posted then.
+    /// Clicks the icon of row `index`. Nil when there is no such row or the row is not clickable:
+    /// nothing is clicked then.
     public func click(rowAt index: Int) -> ClickOutcome? {
         guard rows.indices.contains(index), rows[index].isClickable else { return nil }
-        return clickProxy.click(rows[index].id, among: items)
+        return clickIcon(rows[index].id)
     }
 
     private func loadSnapshots(for strip: [DiscoveredItem], generation mine: Int) async {

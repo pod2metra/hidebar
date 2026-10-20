@@ -29,6 +29,18 @@ final class FakeSnapshotter: Snapshotting {
 
 final class FakeImage {}
 
+/// A menu probe a test flips by hand; `reads` counts how often it was asked.
+@MainActor
+final class FakeMenuProbe {
+    var isOpen = false
+    private(set) var reads = 0
+
+    func isMenuOpen() -> Bool {
+        reads += 1
+        return isOpen
+    }
+}
+
 func discovered(
     _ name: String, x: Double = 0, windowID: Int = 1, managed: Bool = true, movable: Bool = true
 ) -> DiscoveredItem {

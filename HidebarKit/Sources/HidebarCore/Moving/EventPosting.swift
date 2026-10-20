@@ -14,10 +14,10 @@ public struct CursorPoint: Equatable, Sendable {
 public protocol EventPosting {
     func cursorPosition() -> CursorPoint
     func setCursorPosition(_ point: CursorPoint)
-    /// Left mouse button down with the Command flag set.
-    func postCommandMouseDown(at point: CursorPoint)
-    /// Left mouse button up with the Command flag set.
-    func postCommandMouseUp(at point: CursorPoint)
+    /// Left mouse button down at `start` and up at `end`, both with the Command flag set. All or
+    /// nothing: false when either event could not be created, and then neither is posted, so a
+    /// button is never left pressed.
+    func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool
     /// A plain left click (down and up, no modifiers). False when the event could not be created or posted.
     func postClick(at point: CursorPoint) -> Bool
 }

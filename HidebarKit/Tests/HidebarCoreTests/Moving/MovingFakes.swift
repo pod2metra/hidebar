@@ -22,9 +22,29 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     var onWait: (Int) -> Void = { _ in }
     /// What `postClick` reports; false simulates an event that could not be posted.
     var clickPosts = true
+    /// What `postCommandDrag` reports; false simulates events that could not be created.
+    var dragPosts = true
     /// When set, every call records whether this gate was suppressing user input at that moment.
     var gate: InputGate?
     private(set) var gateSamples: [Bool] = []
+    /// Every wait moves it forward by the time waited; `readCost` is what each frame read takes.
+    let uptime = TestUptime()
+    var readCost = 0
+    /// When set, a drag lands on the next wait like a real drop: the item whose centre was pressed
+    /// ends up centred on the release point. Without it only scripted frames ever change.
+    var dragsLand = false
+    private var pendingDrag: (start: CursorPoint, end: CursorPoint)?
+
+    private func landPendingDrag() {
+        guard let drag = pendingDrag else { return }
+        pendingDrag = nil
+        guard let pressed = frames.first(where: { $0.value.x + $0.value.width / 2 == drag.start.x }) else {
+            return
+        }
+        frames[pressed.key] = ItemFrame(
+            x: drag.end.x - pressed.value.width / 2, y: pressed.value.y, width: pressed.value.width,
+            height: pressed.value.height)
+    }
 
     private func sample() {
         gate.map { gateSamples.append($0.suppressUserInput) }
@@ -49,16 +69,19 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
         log.append(.setCursor(point))
     }
 
-    func postCommandMouseDown(at point: CursorPoint) {
+    func postCommandDrag(from start: CursorPoint, to end: CursorPoint) -> Bool {
+        guard dragPosts else {
+            sample()
+            return false
+        }
         sample()
-        cursor = point
-        log.append(.down(point))
-    }
-
-    func postCommandMouseUp(at point: CursorPoint) {
+        cursor = start
+        log.append(.down(start))
         sample()
-        cursor = point
-        log.append(.up(point))
+        cursor = end
+        log.append(.up(end))
+        pendingDrag = dragsLand ? (start, end) : nil
+        return true
     }
 
     func postClick(at point: CursorPoint) -> Bool {
@@ -71,13 +94,16 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     func frame(of id: MenuBarItemID) -> ItemFrame? {
         sample()
         lookups += 1
+        uptime.advance(by: readCost)
         return frames[id]
     }
 
     func wait(milliseconds: Int) {
         sample()
+        uptime.advance(by: milliseconds)
         waits += 1
         log.append(.wait(milliseconds))
+        landPendingDrag()
         onWait(waits)
     }
 }

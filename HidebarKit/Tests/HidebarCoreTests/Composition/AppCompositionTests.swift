@@ -37,13 +37,9 @@ func ownDiscovered(_ title: String, x: Double = 0, windowID: Int = 90) -> Discov
         #expect(result == "done")
         #expect(stateInside == .shown)
         #expect(waitsInside == 1)
-        #expect(scene.bar.log == [.wait(AppComposition.settleMilliseconds)])
+        #expect(scene.bar.log == [.wait(AppComposition.settlePollMilliseconds)])
         #expect(scene.item.lengthWrites == [scene.hiding, scene.normal, scene.hiding])
         #expect(scene.separator.state == .hiding)
-    }
-
-    @Test func settleTimeIsLongEnoughToMeasure() {
-        #expect(AppComposition.settleMilliseconds > 0)
     }
 
     // MARK: discovery

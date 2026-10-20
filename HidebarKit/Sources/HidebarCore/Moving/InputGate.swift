@@ -5,23 +5,60 @@ import Synchronization
 /// another thread, so the state is lock-protected.
 ///
 /// `begin` and `end` nest: a move inside a plan keeps input suppressed until the outermost `end`.
+///
+/// Suppression has a total bound: once the outermost `begin` is `maxSuppressionMilliseconds` old the
+/// gate lets user input through again, whatever the move is stuck on. The thread that made the
+/// moves can be blocked (a hung app answers Accessibility only after its timeout), so the tap
+/// thread must be able to give input back without it. `isOverdue` tells the movers to stop too.
 public final class InputGate: Sendable {
     /// Stored in `eventSourceUserData` of every event the app posts, so the tap can tell them apart.
     public static let syntheticEventTag: Int64 = 0x4844_4252
+    /// Enough for a long plan, short enough that a hung app cannot keep the keyboard for long.
+    public static let defaultMaxSuppressionMilliseconds = 10_000
 
-    private let depth = Mutex<Int>(0)
+    private struct State {
+        var depth = 0
+        var startedAt = 0
 
-    public init() {}
+        mutating func open(at now: Int) {
+            if depth == 0 { startedAt = now }
+            depth += 1
+        }
+    }
 
-    public var suppressUserInput: Bool { depth.withLock { $0 > 0 } }
+    private let state = Mutex(State())
+    private let maxSuppressionMilliseconds: Int
+    private let uptime: Uptime
+
+    public init(
+        maxSuppressionMilliseconds: Int = defaultMaxSuppressionMilliseconds,
+        uptime: @escaping Uptime = systemUptimeMilliseconds
+    ) {
+        self.maxSuppressionMilliseconds = maxSuppressionMilliseconds
+        self.uptime = uptime
+    }
+
+    public var suppressUserInput: Bool {
+        state.withLock { $0.depth > 0 && !hasExpired($0) }
+    }
+
+    /// True while a `begin` is open and the bound has passed: no more moves should be started.
+    public var isOverdue: Bool {
+        state.withLock { $0.depth > 0 && hasExpired($0) }
+    }
 
     public func begin() {
-        depth.withLock { $0 += 1 }
+        let now = uptime()
+        state.withLock { $0.open(at: now) }
     }
 
     /// An `end` without a matching `begin` leaves the gate open.
     public func end() {
-        depth.withLock { $0 = max($0 - 1, 0) }
+        state.withLock { $0.depth = max($0.depth - 1, 0) }
+    }
+
+    private func hasExpired(_ state: State) -> Bool {
+        uptime() - state.startedAt >= maxSuppressionMilliseconds
     }
 
     public func shouldPass(isSynthetic: Bool) -> Bool {

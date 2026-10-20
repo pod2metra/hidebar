@@ -65,6 +65,27 @@ import Testing
         #expect(scene.separator.state == .hiding)
     }
 
+    @Test func aClickFromTheOverflowStripRevealsTheSeparatorLikeAnyOtherClick() async {
+        let composition = composition
+        let strip = OverflowStripViewModel(
+            snapshotter: FakeSnapshotter(), click: { composition.click($0) })
+        // Room for two of the three 10-wide icons: `a` is left over.
+        let screen = OverflowCalculator(
+            screenWidth: 25, notchRightArea: nil, menusWidth: 0, spacing: 0)
+        await strip.recompute(
+            screen: screen, viewportWidth: 25, items: scene.found,
+            capabilities: PermissionsState(accessibility: true, screenRecording: false).capabilities)
+        #expect(strip.rows.map(\.id) == [moveID("a")])
+        scene.script(wait: 2, moves: "a", to: 22)
+
+        #expect(strip.click(rowAt: 0) == .clicked)
+
+        #expect(scene.item.lengthWrites == revealCycle)
+        #expect(scene.lengthAtWaits == [scene.normal, scene.normal])
+        #expect(scene.bar.clicks == [CursorPoint(x: 27, y: 10)])
+        #expect(scene.proxy.hasDisplacedItem)
+    }
+
     // MARK: restoreIfDisplaced
 
     @Test func restoreWithNothingAwayLeavesTheSeparatorAlone() {
@@ -92,6 +113,23 @@ import Testing
 
         #expect(!scene.proxy.hasDisplacedItem)
         #expect(scene.lengthAtWaits.allSatisfy { $0 == scene.normal })
+        #expect(scene.item.lengthWrites == revealCycle + [scene.normal, scene.hiding])
+    }
+
+    @Test func timeoutWaitsWhileAMenuIsOpenWithoutRevealingTheSeparator() {
+        scene.menu.isOpen = true
+        #expect(clickA() == .clicked)
+
+        scene.timer.advance(by: 10)
+
+        #expect(scene.proxy.hasDisplacedItem)
+        #expect(scene.item.lengthWrites == revealCycle)
+
+        scene.menu.isOpen = false
+        scene.script(wait: 4, moves: "a", to: 110)
+        scene.timer.advance(by: 10)
+
+        #expect(!scene.proxy.hasDisplacedItem)
         #expect(scene.item.lengthWrites == revealCycle + [scene.normal, scene.hiding])
     }
 

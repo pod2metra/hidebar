@@ -42,8 +42,8 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 3.1 | Open Settings | Every third-party icon is listed with its app name | |
 | 3.2 | Which AX attribute names an item (`AXTitle`, then `AXDescription`) | Names are stable across relaunches; record apps with empty names | |
 | 3.3 | Hide icons with the separator, then open Settings | Hidden icons are still listed (their windows may report `onscreen=false`) | |
-| 3.4 | A frozen or busy app with a menu bar icon | Discovery does not hang the app (AX messaging timeout is 0.3 s per app); input is never blocked for more than a few seconds | |
-| 3.5 | Hide, then immediately open a group panel or Settings | Positions are read after the bar has re-laid out (the reveal pause is a fixed 150 ms on the main thread) | |
+| 3.4 | A frozen or busy app with a menu bar icon | Discovery does not hang the app (AX messaging timeout is 0.3 s per app); user input is never suppressed for more than 10 seconds in total, even if a move hangs | |
+| 3.5 | Hide, then immediately open a group panel or Settings | Positions are read after the bar has re-laid out: the reveal waits until the separator's frame is the same in two reads 25 ms apart, for about 1 second (one extra frame read). Record the usual wait and any case where an icon was read at a stale position | |
 
 ## 4. Moving and settings (needs Accessibility)
 
@@ -55,6 +55,7 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 4.4 | Try to hide a non-hidable item | The drop is disabled | |
 | 4.5 | Apply while the separator is hiding | Icons are revealed for the move and hidden again afterwards | |
 | 4.6 | Move fails (for example, the app quits mid-move) | Draft is kept, an error names the failed step, nothing is saved | |
+| 4.7 | Apply a plan while an app resizes its icon (for example, a clock or a counter that changes width) | If an icon is not on its side of its anchor once the whole plan has run, Apply reports that step as not in place, keeps the draft and saves nothing | |
 
 ## 5. Groups (needs Accessibility; snapshots need Screen Recording)
 
@@ -65,7 +66,7 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 5.2 | Move icons into the group, Apply, click the group icon | A panel drops down with snapshots of the group's icons | |
 | 5.3 | Click an icon in the panel | Its own menu opens; after the menu closes the icon goes back into hiding | |
 | 5.4 | Click an icon whose click opens no menu | The icon is restored within about 10 seconds | |
-| 5.4a | Keep an icon's menu open longer than 10 seconds | Known limitation: the icon may be restored while its menu is still open | |
+| 5.4a | Keep an icon's menu open longer than 10 seconds | The icon stays where it is while any menu is open (an open menu window is detected on the pop-up menu layer); about 10 seconds after the menu closes it goes back, and the menu is never closed under you | |
 | 5.5 | Delete a group | Its icons move to hidden; none disappear | |
 | 5.6 | Change a group's symbol | The status item updates | |
 
@@ -77,7 +78,7 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 6.2 | Open an app with long menus (Xcode) | Icons covered by the menus appear in the strip | |
 | 6.3 | Scroll the strip with a mouse wheel, Shift+wheel and a trackpad | It scrolls horizontally with all three; tune `pointsPerWheelLine` (20) if it feels off | |
 | 6.4 | Toggle natural scrolling | The strip follows the system direction | |
-| 6.5 | Click an icon in the strip, including the one right next to the separator | Its menu opens; the icon returns afterwards | |
+| 6.5 | Click an icon in the strip, including the one right next to the separator | Every strip click goes through the same reveal and return as a panel click. Its menu opens; the icon returns afterwards. The icon next to the separator is dragged over its next neighbour (or clicked in place when it has none), so the click does not fail with a reveal error | |
 
 ## 7. Platforms
 

@@ -18,8 +18,8 @@ final class OverflowStripWindow: NSObject {
         }
     }
 
-    /// Called with the icon whose row was clicked.
-    var onRowClick: (MenuBarItemID) -> Void = { _ in }
+    /// Called with what came of clicking a row's icon.
+    var onRowClick: (ClickOutcome) -> Void = { _ in }
 
     private static let height = 36.0
 
@@ -33,7 +33,7 @@ final class OverflowStripWindow: NSObject {
     init(services: AppServices) {
         self.services = services
         viewModel = OverflowStripViewModel(
-            snapshotter: services.snapshotter, clickProxy: services.clickProxy)
+            snapshotter: services.snapshotter, click: services.composition.click)
         super.init()
         strip.material = .menu
         strip.state = .active
@@ -101,6 +101,6 @@ final class OverflowStripWindow: NSObject {
     }
 
     @objc private func rowClicked(_ sender: NSButton) {
-        onRowClick(viewModel.rows[sender.tag].id)
+        viewModel.click(rowAt: sender.tag).map(onRowClick)
     }
 }

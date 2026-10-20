@@ -34,7 +34,6 @@ public struct OverflowCalculator: Sendable {
     }
 
     public func partition(itemWidths: [Double]) -> OverflowPartition {
-        let leftLimit = max(notchRightArea?.minX ?? menusWidth, menusWidth)
         let available = max(0, screenWidth - leftLimit)
         var used = 0.0
         var fitting = 0

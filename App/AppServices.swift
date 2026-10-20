@@ -45,11 +45,13 @@ final class AppServices {
         let moveClock = ThreadMoveClock()
         let executor = MoveExecutor(
             poster: poster, locator: locator, clock: moveClock, inputGate: inputGate)
+        let menuProbe = OpenMenuProbe(windowList: windows)
         let proxy = ClickProxy(
             executor: executor, poster: poster, locator: locator, separator: OwnItems.separatorID,
-            revealSide: .rightOf, clock: DispatchSchedulingClock(), inputGate: inputGate)
+            revealSide: .rightOf, clock: DispatchSchedulingClock(), inputGate: inputGate,
+            isMenuOpen: { menuProbe.isMenuOpen() })
         composition = AppComposition(
-            separator: separator, clickProxy: proxy, clock: moveClock,
+            separator: separator, clickProxy: proxy, clock: moveClock, locator: locator,
             discover: { discovery.discover() })
         self.executor = executor
         self.clickProxy = proxy

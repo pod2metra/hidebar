@@ -22,7 +22,7 @@ final class AppController: NSObject {
         super.init()
         services.groupItems.onClick = { [weak self] id, button in self?.groupClicked(id, button) }
         panel.onRowClick = { [weak self] id in self?.iconClicked(id) }
-        strip.onRowClick = { [weak self] id in self?.iconClicked(id) }
+        strip.onRowClick = { [weak self] outcome in self?.show(outcome) }
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(screensChanged), name: NSWorkspace.didActivateApplicationNotification,
             object: nil)
@@ -94,7 +94,11 @@ final class AppController: NSObject {
     }
 
     private func iconClicked(_ id: MenuBarItemID) {
-        UserMessages.text(for: services.composition.click(id)).map(show(message:))
+        show(services.composition.click(id))
+    }
+
+    private func show(_ outcome: ClickOutcome) {
+        UserMessages.text(for: outcome).map(show(message:))
     }
 
     // MARK: windows

@@ -31,7 +31,9 @@ public enum RestoreOutcome: Equatable, Sendable {
 /// away from its place `hasDisplacedItem` stays true until a restore succeeds.
 ///
 /// A clicked icon also returns by itself when `menuDidClose()` is not called within
-/// `restoreTimeout`: the closing of a foreign menu is not observable, so it cannot be the only trigger.
+/// `restoreTimeout`: the closing of a foreign menu is not observable, so it cannot be the only
+/// trigger. Dragging the icon away while its menu is open would close the menu, so while
+/// `isMenuOpen` says one is, the timeout starts over instead.
 @MainActor
 public final class ClickProxy {
     private struct Displaced {
@@ -48,6 +50,7 @@ public final class ClickProxy {
     private let revealSide: DropSide
     private let clock: any SchedulingClock
     private let inputGate: InputGate
+    private let isMenuOpen: @MainActor () -> Bool
     private let restoreTimeout: TimeInterval
     private var displaced: Displaced?
     private var restoreTimer: (any Cancellable)?
@@ -62,10 +65,13 @@ public final class ClickProxy {
     /// `revealSide` is the side of `separator` where icons are on screen. `inputGate` is the one
     /// the executor holds: user input stays suppressed from the reveal to the end of the click.
     /// It has no default, so a composition cannot leave rule 4 switched off by forgetting it.
+    /// `isMenuOpen` tells whether any menu is open on screen; it has no default either, so the
+    /// timeout cannot silently go back to closing a menu under the user.
     public init(
         executor: MoveExecutor, poster: any EventPosting, locator: any ItemLocating,
         separator: MenuBarItemID, revealSide: DropSide, clock: any SchedulingClock,
-        inputGate: InputGate, restoreTimeout: TimeInterval = 10
+        inputGate: InputGate, isMenuOpen: @escaping @MainActor () -> Bool,
+        restoreTimeout: TimeInterval = 10
     ) {
         self.executor = executor
         self.poster = poster
@@ -74,6 +80,7 @@ public final class ClickProxy {
         self.revealSide = revealSide
         self.clock = clock
         self.inputGate = inputGate
+        self.isMenuOpen = isMenuOpen
         self.restoreTimeout = restoreTimeout
     }
 
@@ -89,8 +96,9 @@ public final class ClickProxy {
         // the reveal and the click must not reach the system.
         inputGate.begin()
         defer { inputGate.end() }
-        let reveal = MoveStep(item: found.item, anchor: separator, side: revealSide)
-        guard executor.move(reveal) == .moved else {
+        let reveal = RevealPlanner.step(
+            for: found, among: items, separator: separator, side: revealSide)
+        if let reveal, executor.move(reveal) != .moved {
             returnHome()
             return .revealFailed
         }
@@ -98,7 +106,7 @@ public final class ClickProxy {
             returnHome()
             return .clickFailed
         }
-        restoreTimer = clock.schedule(after: restoreTimeout) { [weak self] in self?.restoreTimedOut() }
+        armRestoreTimer()
         return .clicked
     }
 
@@ -118,7 +126,15 @@ public final class ClickProxy {
         menuDidClose()
     }
 
+    private func armRestoreTimer() {
+        restoreTimer = clock.schedule(after: restoreTimeout) { [weak self] in self?.restoreTimedOut() }
+    }
+
     private func restoreTimedOut() {
+        guard !isMenuOpen() else {
+            armRestoreTimer()
+            return
+        }
         guard let handler = onRestoreTimeout else {
             menuDidClose()
             return
@@ -146,7 +162,7 @@ public final class ClickProxy {
     }
 
     private func postClick(on id: MenuBarItemID) -> Bool {
-        guard let frame = locator.frame(of: id) else { return false }
+        guard let frame = locator.frame(of: id), !inputGate.isOverdue else { return false }
         let savedCursor = poster.cursorPosition()
         defer { poster.setCursorPosition(savedCursor) }
         return poster.postClick(

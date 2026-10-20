@@ -53,7 +53,7 @@ public enum UserMessages {
         switch outcome {
         case .moved: "moved"
         case .unmovable: "cannot be moved"
-        case .failed: "did not move"
+        case .failed: "did not end up in place"
         }
     }
 
