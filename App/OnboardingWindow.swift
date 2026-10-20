@@ -2,8 +2,9 @@ import AppKit
 import ApplicationServices
 import HidebarCore
 
-/// Lists the permissions that are still missing, each with a button that asks the system for it
-/// and opens the System Settings pane. The window closes by itself once nothing is missing.
+/// Lists the required permissions that are still missing, each with a button that asks the system
+/// for it and opens the System Settings pane. The window closes by itself once nothing is missing.
+/// Optional permissions are offered from the status menu instead.
 @MainActor
 final class OnboardingWindow: NSObject {
     private final class PermissionButton: NSButton {
@@ -13,8 +14,7 @@ final class OnboardingWindow: NSObject {
     /// Registers the app in the permission's list in System Settings; the user still has to
     /// switch it on there.
     private static let requests: [Permission: () -> Void] = [
-        .accessibility: { _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) },
-        .screenRecording: { _ = CGRequestScreenCaptureAccess() },
+        .accessibility: { _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) }
     ]
 
     private let window = NSWindow(
@@ -27,9 +27,9 @@ final class OnboardingWindow: NSObject {
         window.isReleasedWhenClosed = false
     }
 
-    /// Shows the missing permissions of `state`, or closes the window when there are none.
+    /// Shows the missing required permissions of `state`, or closes the window when there are none.
     func update(_ state: PermissionsState) {
-        guard !state.missing.isEmpty else {
+        guard !state.missingRequired.isEmpty else {
             window.orderOut(nil)
             return
         }
@@ -37,7 +37,7 @@ final class OnboardingWindow: NSObject {
             wrappingLabelWithString:
                 "Hidebar still works without these permissions, with fewer features. "
                 + "Switch them on in System Settings, then come back to this app.")
-        let root = NSStackView(views: [intro] + state.missing.map(block(for:)))
+        let root = NSStackView(views: [intro] + state.missingRequired.map(block(for:)))
         root.orientation = .vertical
         root.alignment = .leading
         root.spacing = 14

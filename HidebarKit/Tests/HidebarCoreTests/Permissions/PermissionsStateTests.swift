@@ -15,7 +15,7 @@ import Testing
         #expect(!caps.canIdentifyOwners)
         #expect(!caps.canSnapshot)
         #expect(caps.panelPresentation == .appNameAndIcon)
-        #expect(Self.none.missing == [.accessibility, .screenRecording])
+        #expect(Self.none.missingRequired == [.accessibility])
     }
 
     @Test func accessibilityOnlyMovesWithoutSnapshots() {
@@ -25,7 +25,7 @@ import Testing
         #expect(caps.canIdentifyOwners)
         #expect(!caps.canSnapshot)
         #expect(caps.panelPresentation == .appNameAndIcon)
-        #expect(Self.axOnly.missing == [.screenRecording])
+        #expect(Self.axOnly.missingRequired.isEmpty)
     }
 
     @Test func screenRecordingOnlySnapshotsWithoutMoving() {
@@ -35,7 +35,7 @@ import Testing
         #expect(!caps.canIdentifyOwners)
         #expect(caps.canSnapshot)
         #expect(caps.panelPresentation == .snapshots)
-        #expect(Self.srOnly.missing == [.accessibility])
+        #expect(Self.srOnly.missingRequired == [.accessibility])
     }
 
     @Test func everythingGrantedEnablesAll() {
@@ -45,7 +45,12 @@ import Testing
         #expect(caps.canIdentifyOwners)
         #expect(caps.canSnapshot)
         #expect(caps.panelPresentation == .snapshots)
-        #expect(Self.both.missing.isEmpty)
+        #expect(Self.both.missingRequired.isEmpty)
+    }
+
+    @Test func onlyAccessibilityIsRequired() {
+        #expect(Permission.accessibility.isRequired)
+        #expect(!Permission.screenRecording.isRequired)
     }
 
     @Test func isGrantedReadsEachPermission() {

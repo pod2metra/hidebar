@@ -8,23 +8,24 @@ next plan block.
 Build and run:
 
 ```bash
-xcodebuild -project Hidebar.xcodeproj -scheme Hidebar -configuration Debug \
-  -derivedDataPath build/dd build
-open build/dd/Build/Products/Debug/Hidebar.app
+bash scripts/dev_cert.sh   # once: a local signing identity, so grants survive rebuilds
+make run                   # builds, signs, quits the old copy and launches
 ```
 
-With ad-hoc signing, macOS forgets the permissions after every rebuild. Set a
-development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build.
+Launch the app only through `make run`: a copy built elsewhere (for example by Xcode's
+Run button) has another signature and looks ungranted. See `docs/XCODE_SETUP.md`.
 
 ## 1. Permissions and onboarding
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 1.1 | First launch with no permissions | Onboarding lists Accessibility and Screen Recording; the buttons open the right System Settings panes | |
-| 1.2 | Grant Accessibility only, switch back to the app | Onboarding updates without a restart; groups show app names, rows are clickable | |
-| 1.3 | Grant Screen Recording only | Rows show app names and are not clickable; nothing is moved | |
+| 1.1 | First launch with no permissions | Onboarding lists only Accessibility; its button opens the Accessibility pane. No Screen Recording prompt appears | |
+| 1.2 | Grant Accessibility only, switch back to the app | Onboarding closes without a restart; groups show app names, rows are clickable | |
+| 1.3 | Grant Screen Recording only | Onboarding still lists Accessibility; rows are not clickable; nothing is moved | |
 | 1.4 | No permissions at all | Hiding with the separator still works; nothing is moved | |
 | 1.5 | Revoke Screen Recording while running | Panels fall back to app names; no crash | |
+| 1.6 | Right-click the toggle icon without Screen Recording | Menu has "Show Icon Images…"; it shows the system prompt and opens the Screen Recording pane | |
+| 1.7 | Right-click the toggle icon with Screen Recording granted | Menu has no "Show Icon Images…" item | |
 
 ## 2. Hiding
 

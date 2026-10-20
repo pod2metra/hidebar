@@ -15,6 +15,7 @@ import Testing
         #expect(prompt.title == "Screen Recording")
         #expect(prompt.settingsURL.hasSuffix("Privacy_ScreenCapture"))
         #expect(prompt.detail.contains("app names"))
+        #expect(prompt.detail.contains("Optional"))
     }
 
     @Test func everyPermissionHasADistinctPane() {

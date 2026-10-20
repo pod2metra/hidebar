@@ -33,7 +33,7 @@ Hidebar degrades gracefully when a permission is missing.
 | Permission | Why | Without it |
 |---|---|---|
 | Accessibility | Reads which app owns each icon and where it is, and moves icons with synthetic Command-drag events | Hiding with the separator still works; nothing is listed, moved or clicked |
-| Screen Recording | Captures the images of hidden icons for the group panel | The panel shows app names instead of images, and its rows are not clickable |
+| Screen Recording (optional) | Captures the images of hidden icons for the group panel. Not asked for at launch; choose "Show Icon Images…" in the status menu to enable it | The panel shows app names instead of images; its rows still work with Accessibility |
 
 macOS ties both grants to the app's code signature. The app is not sandboxed,
 because a sandbox does not allow moving other apps' icons.

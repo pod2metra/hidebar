@@ -4,6 +4,11 @@ public enum Permission: Sendable, CaseIterable {
     case accessibility
     /// Snapshots of icons for the group panel.
     case screenRecording
+
+    /// Onboarding asks only for required permissions; the others are offered on demand.
+    public var isRequired: Bool {
+        self == .accessibility
+    }
 }
 
 /// How the group panel renders a hidden icon.
@@ -55,9 +60,9 @@ public struct PermissionsState: Sendable, Equatable {
         )
     }
 
-    /// Permissions not granted yet, in onboarding order.
-    public var missing: [Permission] {
-        Permission.allCases.filter { !isGranted($0) }
+    /// Required permissions not granted yet, in onboarding order.
+    public var missingRequired: [Permission] {
+        Permission.allCases.filter { $0.isRequired && !isGranted($0) }
     }
 
     /// Compares with an earlier state, for re-prompt handling: macOS periodically revokes Screen Recording.

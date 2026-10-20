@@ -79,9 +79,20 @@ final class AppController: NSObject {
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        if !services.permissions.current().screenRecording {
+            menu.addItem(withTitle: "Show Icon Images…", action: #selector(requestScreenRecording), keyEquivalent: "")
+                .target = self
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Hidebar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
+    }
+
+    /// Screen Recording is optional: it is requested only when the user asks for icon images.
+    @objc private func requestScreenRecording() {
+        _ = CGRequestScreenCaptureAccess()
+        URL(string: PermissionPrompt.prompt(for: .screenRecording).settingsURL)
+            .map { _ = NSWorkspace.shared.open($0) }
     }
 
     private func groupClicked(_ id: UUID, _ button: NSStatusBarButton) {

@@ -16,7 +16,7 @@ public struct PermissionPrompt: Equatable, Sendable {
         case .screenRecording:
             PermissionPrompt(
                 title: "Screen Recording",
-                detail: "Lets Hidebar show the real icons in a group's panel. Without it the panel shows app names instead.",
+                detail: "Optional. Lets Hidebar show the real icons in a group's panel. Without it the panel shows app names instead, and its rows still work.",
                 settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
         }
     }
