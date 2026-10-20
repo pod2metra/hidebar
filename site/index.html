@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hidebar: hide menu-bar icons on macOS</title>
+<meta name="description" content="Hidebar is a free, open-source macOS menu-bar utility. One divider hides the icons on its left; icons that don't fit the bar appear in a strip below it. No telemetry, no network.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Hidebar: hide menu-bar icons on macOS">
+<meta property="og:description" content="Free, open-source macOS menu-bar utility. One divider, one click, no telemetry.">
+<meta property="og:url" content="https://pod2metra.github.io/hidebar/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap hero-inner">
+    <img class="logo" src="logo.svg" alt="" width="144" height="144">
+    <h1>Hidebar</h1>
+    <p class="lead">Hide the menu-bar icons you don't need. One divider, one click.</p>
+    <div class="install-cmd">
+      <span class="label">Install with Homebrew</span>
+      <div class="cmd-row">
+        <code id="brew-cmd">brew install --cask pod2metra/tap/hidebar</code>
+        <button type="button" id="copy-btn" hidden>Copy</button>
+      </div>
+    </div>
+    <p class="actions">
+      <a class="btn primary" href="https://github.com/pod2metra/hidebar/releases/latest">Download DMG</a>
+      <a class="btn" href="https://github.com/pod2metra/hidebar">View on GitHub</a>
+    </p>
+    <p class="meta">Free and open source. macOS 15 Sequoia or later.</p>
+  </div>
+</header>
+
+<main>
+  <section class="wrap" aria-labelledby="how-it-looks">
+    <h2 id="how-it-looks">One divider. Two states.</h2>
+    <p class="section-lead">The divider is a pipe and an arrow. Everything left of the pipe can be hidden; click the arrow to collapse or expand it.</p>
+    <div class="demo">
+      <figure>
+        <div class="bar" role="img" aria-label="Menu bar with all icons shown, then the pipe and the arrow, then the clock">
+          <span class="ico"></span><span class="ico"></span><span class="ico"></span><span class="ico"></span>
+          <span class="pipe"></span><span class="arrow">&#8250;</span>
+          <span class="sys">Mon 9:41</span>
+        </div>
+        <figcaption>Expanded: every icon is visible.</figcaption>
+      </figure>
+      <figure>
+        <div class="bar" role="img" aria-label="Menu bar with the icons hidden: only the pipe, the arrow and the clock remain">
+          <span class="gap"></span>
+          <span class="pipe"></span><span class="arrow">&#8250;</span>
+          <span class="sys">Mon 9:41</span>
+        </div>
+        <figcaption>Collapsed: the icons left of the pipe are out of the way.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="why-open">
+    <h2 id="why-open">Why open source</h2>
+    <p class="section-lead">Hidebar asks for the Accessibility permission, so you should be able to read what it does with it.</p>
+    <ul class="cards">
+      <li><h3>Auditable</h3><p>The whole app is on GitHub under the MIT license. Read it, build it yourself, or send a fix.</p></li>
+      <li><h3>No telemetry</h3><p>No analytics, no accounts, no network access. Nothing leaves your Mac.</p></li>
+      <li><h3>Degrades gracefully</h3><p>If a permission is missing, Hidebar keeps working with fewer features instead of failing.</p></li>
+    </ul>
+  </section>
+
+  <section class="wrap" id="install" aria-labelledby="install-h">
+    <h2 id="install-h">Install</h2>
+    <div class="steps">
+      <div class="step">
+        <h3>Homebrew</h3>
+        <pre><code>brew install --cask pod2metra/tap/hidebar</code></pre>
+      </div>
+      <div class="step">
+        <h3>Disk image</h3>
+        <p>Download the DMG from the <a href="https://github.com/pod2metra/hidebar/releases/latest">latest release</a>, open it and drag Hidebar to Applications.</p>
+      </div>
+      <div class="step">
+        <h3>Build from source</h3>
+        <pre><code>git clone https://github.com/pod2metra/hidebar
+cd hidebar
+bash scripts/dev_cert.sh   # once: a local signing identity
+make run</code></pre>
+        <p>Needs Xcode 27 (Swift 6.4).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="usage">
+    <h2 id="usage">How to use</h2>
+    <ol class="usage">
+      <li><strong>Arrange.</strong> Hold <kbd>&#8984;</kbd> and drag an icon to the left of the pipe to hide it, or to the right to keep it visible. This is the system's own gesture.</li>
+      <li><strong>Collapse.</strong> Click the arrow to hide everything left of the pipe, and click it again to show it. Hidebar refuses to hide icons when the arrow would go with them.</li>
+      <li><strong>Menu.</strong> Right-click, Control-click or middle-click the pipe or the arrow for the menu: Show Icon Images… (while Screen Recording is off), How to Use Hidebar…, Quit Hidebar.</li>
+      <li><strong>Overflow strip.</strong> Visible icons that don't fit the bar, behind the notch or under long app menus, appear in a strip below the menu bar. Click one to open its own menu.</li>
+    </ol>
+  </section>
+
+  <section class="wrap" aria-labelledby="perms">
+    <h2 id="perms">Permissions</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">Permission</th><th scope="col">Why</th><th scope="col">Without it</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Accessibility</th><td>Finds which app owns each icon and clicks icons in the overflow strip.</td><td>Hiding still works. The strip lists icons but can't click them.</td></tr>
+          <tr><th scope="row">Screen Recording <small>(optional)</small></th><td>Captures the images of icons in the strip. Not asked for at launch; choose Show Icon Images… in the menu.</td><td>The strip shows each app's name and icon instead of a snapshot.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="faq">
+    <h2 id="faq">FAQ</h2>
+    <details><summary>What about the notch?</summary><p>Icons that end up behind the notch or under a long app menu aren't hidden, they're just unreachable. Hidebar shows them in a strip below the menu bar so you can still click them.</p></details>
+    <details><summary>Why does it need Accessibility?</summary><p>macOS offers no public way to learn which app owns an icon, or to click it for you. Accessibility is how Hidebar reads icon positions and clicks icons in the strip. Hiding with the divider works without it.</p></details>
+    <details><summary>Does it phone home?</summary><p>No. Hidebar has no telemetry and makes no network connections. The code is public, so you can check.</p></details>
+    <details><summary>Which macOS versions are supported?</summary><p>macOS 15 Sequoia or later.</p></details>
+    <details><summary>Will I lose icons if it crashes?</summary><p>No. The divider's length is restored at launch and at quit, so a crash never leaves an icon hidden.</p></details>
+    <details><summary>How do I uninstall it?</summary><p>Quit Hidebar from its menu, then run <code>brew uninstall --zap --cask hidebar</code>. If you installed from the DMG, drag the app to the Trash.</p></details>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>Hidebar &middot; MIT License</span>
+    <a href="https://github.com/pod2metra/hidebar">GitHub</a>
+    <a href="https://github.com/pod2metra/hidebar/blob/main/LICENSE">License</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var btn = document.getElementById('copy-btn');
+  if (!btn || !navigator.clipboard) return;
+  btn.hidden = false;
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(document.getElementById('brew-cmd').textContent).then(function () {
+      btn.textContent = 'Copied';
+      setTimeout(function () { btn.textContent = 'Copy'; }, 1600);
+    }, function () {
+      btn.textContent = 'Copy failed';
+      setTimeout(function () { btn.textContent = 'Copy'; }, 1600);
+    });
+  });
+})();
+</script>
+</body>
+</html>

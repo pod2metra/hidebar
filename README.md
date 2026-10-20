@@ -76,7 +76,8 @@ Requires Xcode 27 (Swift 6.4).
 git clone https://github.com/pod2metra/hidebar.git
 cd hidebar
 make check    # tests, 100% HidebarCore coverage, mutation score, adapter lint
-make run      # Debug build signed with a local identity, then launched
+bash scripts/dev_cert.sh   # once: creates the local signing identity make run uses
+make run      # Debug build signed with that identity, then launched
 ```
 
 `make package` builds an ad-hoc signed `build/Hidebar.dmg`. See [docs/XCODE_SETUP.md](docs/XCODE_SETUP.md) for the project layout and for keeping permissions stable between rebuilds, and [docs/MANUAL_TEST.md](docs/MANUAL_TEST.md) for the manual checklist.
