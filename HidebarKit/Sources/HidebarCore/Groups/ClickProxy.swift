@@ -51,7 +51,7 @@ public final class ClickProxy {
     private let separator: MenuBarItemID
     private let revealSide: DropSide
     private let clock: any SchedulingClock
-    private let inputGate: InputGate
+    private let deadline: MoveDeadline
     private let isMenuOpen: @MainActor () -> Bool
     private let restoreTimeout: TimeInterval
     private let maxDisplacement: TimeInterval
@@ -67,16 +67,16 @@ public final class ClickProxy {
     /// proxy cannot do itself: the icon's home may be off screen.
     public var onRestoreTimeout: (@MainActor () -> Void)?
 
-    /// `revealSide` is the side of `separator` where icons are on screen. `inputGate` is the one
-    /// the executor holds: user input stays suppressed from the reveal to the end of the click.
-    /// It has no default, so a composition cannot leave rule 4 switched off by forgetting it.
+    /// `revealSide` is the side of `separator` where icons are on screen. `deadline` is the one
+    /// the executor holds: it bounds the events from the reveal to the end of the click.
+    /// It has no default, so a composition cannot leave rule 4 unbounded by forgetting it.
     /// `isMenuOpen` tells whether any menu is open on screen; it has no default either, so the
     /// timeout cannot silently go back to closing a menu under the user. After `maxDisplacement`
     /// seconds in all, the icon is restored whatever the probe says.
     public init(
         executor: MoveExecutor, poster: any EventPosting, locator: any ItemLocating,
         separator: MenuBarItemID, revealSide: DropSide, clock: any SchedulingClock,
-        inputGate: InputGate, isMenuOpen: @escaping @MainActor () -> Bool,
+        deadline: MoveDeadline, isMenuOpen: @escaping @MainActor () -> Bool,
         restoreTimeout: TimeInterval = 10, maxDisplacement: TimeInterval = 120
     ) {
         self.executor = executor
@@ -85,7 +85,7 @@ public final class ClickProxy {
         self.separator = separator
         self.revealSide = revealSide
         self.clock = clock
-        self.inputGate = inputGate
+        self.deadline = deadline
         self.isMenuOpen = isMenuOpen
         self.restoreTimeout = restoreTimeout
         self.maxDisplacement = maxDisplacement
@@ -99,10 +99,9 @@ public final class ClickProxy {
         guard let origin = locator.frame(of: id) else { return .refused(.notLocated) }
         displaced = Displaced(
             item: found.item, originX: origin.x, homeAnchor: home.anchor, homeSide: home.side)
-        // One closure of the gate around reveal, click and cursor restore: input arriving between
-        // the reveal and the click must not reach the system.
-        inputGate.begin()
-        defer { inputGate.end() }
+        // One deadline around reveal, click and cursor restore.
+        deadline.begin()
+        defer { deadline.end() }
         let reveal = RevealPlanner.step(
             for: found, among: items, separator: separator, side: revealSide)
         if let reveal, executor.move(reveal) != .moved {
@@ -173,7 +172,7 @@ public final class ClickProxy {
     }
 
     private func postClick(on id: MenuBarItemID) -> Bool {
-        guard let frame = locator.frame(of: id), !inputGate.isOverdue else { return false }
+        guard let frame = locator.frame(of: id), !deadline.isOverdue else { return false }
         let savedCursor = poster.cursorPosition()
         defer { poster.setCursorPosition(savedCursor) }
         return poster.postClick(

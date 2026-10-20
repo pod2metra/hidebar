@@ -13,7 +13,7 @@ import Testing
     private var revealCycle: [Double] { [scene.hiding, scene.normal, scene.hiding] }
 
     init() {
-        scene.separator.hide()
+        scene.collapse()
     }
 
     /// Click on `a`: settle is wait 1, the reveal drag polls at wait 2.
@@ -29,7 +29,8 @@ import Testing
         #expect(scene.item.lengthWrites == revealCycle)
         #expect(scene.bar.clicks == [CursorPoint(x: 27, y: 10)])
         #expect(scene.proxy.hasDisplacedItem)
-        #expect(!scene.gate.suppressUserInput)
+        scene.bar.uptime.advance(by: MoveDeadline.defaultBudgetMilliseconds)
+        #expect(!scene.deadline.isOverdue)
     }
 
     @Test func refusedClickStillPutsTheSeparatorBack() {

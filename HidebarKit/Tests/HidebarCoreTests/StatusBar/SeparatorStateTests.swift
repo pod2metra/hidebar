@@ -3,8 +3,8 @@ import Testing
 @testable import HidebarCore
 
 @Suite struct SeparatorStateTests {
-    @Test func toggleSymbolPointsAtTheSideTheHiddenIconsAreOn() {
-        #expect(SeparatorState.shown.toggleSymbolName == "chevron.right")
-        #expect(SeparatorState.hiding.toggleSymbolName == "chevron.left")
+    @Test func theArrowPointsLeftWhileTheIconsAreHiddenAndRightWhileShown() {
+        #expect(SeparatorState.hiding.arrowSymbolName == "chevron.left")
+        #expect(SeparatorState.shown.arrowSymbolName == "chevron.right")
     }
 }

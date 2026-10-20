@@ -2,16 +2,16 @@ import Testing
 
 @testable import HidebarCore
 
-/// The gate gives up after 1000 ms; a move that is stuck on slow reads must stop, not start over.
+/// The deadline is 1000 ms; a move that is stuck on slow reads must stop, not start over.
 @MainActor @Suite struct MoveExecutorDeadlineTests {
     private let bar = MoveFakeBar()
-    private let gate: InputGate
+    private let deadline: MoveDeadline
     private let executor: MoveExecutor
 
     init() {
-        gate = InputGate(maxSuppressionMilliseconds: 1000, uptime: bar.uptime.reader)
+        deadline = MoveDeadline(budgetMilliseconds: 1000, uptime: bar.uptime.reader)
         executor = MoveExecutor(
-            poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate)
+            poster: bar, locator: bar, windows: bar, clock: bar, deadline: deadline)
         bar.frames[moveID("item")] = ItemFrame(x: 100, y: 0, width: 10, height: 20)
         bar.frames[moveID("other")] = ItemFrame(x: 200, y: 0, width: 10, height: 20)
         bar.frames[moveID("anchor")] = ItemFrame(x: 50, y: 0, width: 20, height: 20)
@@ -19,10 +19,6 @@ import Testing
 
     private func step(_ name: String = "item") -> MoveStep {
         MoveStep(item: moveItem(name), anchor: moveID("anchor"), side: .rightOf)
-    }
-
-    private var layout: Layout {
-        try! Layout(visible: [moveID("item")], hidden: [], groups: [])
     }
 
     @Test func slowReadsEndTheMoveAsFailedWithoutAnotherAttempt() {
@@ -35,8 +31,7 @@ import Testing
         #expect(bar.downs.count == 1)
         #expect(bar.waits == 3)
         #expect(bar.restores == [bar.cursor])
-        #expect(!gate.suppressUserInput)
-        #expect(!gate.isOverdue)
+        #expect(!deadline.isOverdue)
     }
 
     @Test func noDragIsPostedWhenTheReadsBeforeItOutlastedTheGate() {
@@ -44,14 +39,14 @@ import Testing
 
         #expect(executor.move(step()) == .failed)
 
-        // The gate was fresh when the attempt began; the read used it up. Nothing was touched.
+        // The deadline was fresh when the attempt began; the read used it up. Nothing was touched.
         #expect(bar.downs.isEmpty)
         #expect(bar.waits == 0)
         #expect(bar.restores.isEmpty)
-        #expect(!gate.suppressUserInput)
+        #expect(!deadline.isOverdue)
     }
 
-    @Test func waitingForAWindowStopsOnceTheGateIsOverdue() {
+    @Test func waitingForAWindowStopsOnceTheDeadlineIsOverdue() {
         bar.windowless = [moveID("anchor")]
         bar.onWait = { [bar] _ in bar.uptime.advance(by: 5000) }
 
@@ -59,24 +54,7 @@ import Testing
 
         #expect(bar.waits == 1)
         #expect(bar.downs.isEmpty)
-        #expect(!gate.suppressUserInput)
-    }
-
-    @Test func aPlanThatRunsOutOfTimeStopsBeforeTheNextStepAndConfirmsNothing() {
-        bar.onWait = { [bar] _ in
-            bar.uptime.advance(by: 5000)
-            bar.frames[moveID("item")] = ItemFrame(x: 60, y: 0, width: 10, height: 20)
-        }
-        var confirmed = false
-
-        let result = executor.execute([step(), step("other")], confirming: layout) { _ in
-            confirmed = true
-        }
-
-        #expect(result == .stopped(stepIndex: 1, outcome: .failed))
-        #expect(!confirmed)
-        #expect(bar.downs.count == 1)
-        #expect(!gate.suppressUserInput)
+        #expect(!deadline.isOverdue)
     }
 
     @Test func aMoveInsideTheBoundIsNotCutShort() {

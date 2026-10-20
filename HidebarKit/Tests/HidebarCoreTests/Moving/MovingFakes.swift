@@ -24,9 +24,6 @@ final class MoveFakeBar: EventPosting, ItemLocating, WindowLocating, MoveClock {
     var clickPosts = true
     /// What `postCommandDrag` reports; false simulates events that could not be created.
     var dragPosts = true
-    /// When set, every call records whether this gate was suppressing user input at that moment.
-    var gate: InputGate?
-    private(set) var gateSamples: [Bool] = []
     /// Every wait moves it forward by the time waited; `readCost` is what each frame read takes.
     let uptime = TestUptime()
     var readCost = 0
@@ -71,10 +68,6 @@ final class MoveFakeBar: EventPosting, ItemLocating, WindowLocating, MoveClock {
             width: pressed.value.width, height: pressed.value.height)
     }
 
-    private func sample() {
-        gate.map { gateSamples.append($0.suppressUserInput) }
-    }
-
     var clicks: [CursorPoint] { log.compactMap { if case .click(let point) = $0 { point } else { nil } } }
     var downs: [CursorPoint] { log.compactMap { if case .down(let point) = $0 { point } else { nil } } }
     var ups: [CursorPoint] { log.compactMap { if case .up(let point) = $0 { point } else { nil } } }
@@ -83,26 +76,19 @@ final class MoveFakeBar: EventPosting, ItemLocating, WindowLocating, MoveClock {
     }
 
     func cursorPosition() -> CursorPoint {
-        sample()
         cursorReads += 1
         return cursor
     }
 
     func setCursorPosition(_ point: CursorPoint) {
-        sample()
         cursor = point
         log.append(.setCursor(point))
     }
 
     func postCommandDrag(_ drag: CommandDrag) -> Bool {
-        guard dragPosts else {
-            sample()
-            return false
-        }
-        sample()
+        guard dragPosts else { return false }
         cursor = CommandDrag.pressPoint
         log.append(.down(CommandDrag.pressPoint))
-        sample()
         cursor = drag.release
         log.append(.up(drag.release))
         drags.append(drag)
@@ -111,21 +97,18 @@ final class MoveFakeBar: EventPosting, ItemLocating, WindowLocating, MoveClock {
     }
 
     func postClick(at point: CursorPoint) -> Bool {
-        sample()
         cursor = point
         log.append(.click(point))
         return clickPosts
     }
 
     func frame(of id: MenuBarItemID) -> ItemFrame? {
-        sample()
         lookups += 1
         uptime.advance(by: readCost)
         return frames[id]
     }
 
     func wait(milliseconds: Int) {
-        sample()
         uptime.advance(by: milliseconds)
         waits += 1
         log.append(.wait(milliseconds))

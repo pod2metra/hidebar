@@ -13,7 +13,6 @@ extension CGEventPoster {
             mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
             mouseCursorPosition: CGPoint(x: point.x, y: point.y), mouseButton: .left)
         event?.flags = flags
-        event?.setIntegerValueField(.eventSourceUserData, value: InputGate.syntheticEventTag)
         return event
     }
 

@@ -1,8 +1,8 @@
 import AppKit
 import HidebarCore
 
-/// What the separator looks like on the bar and what Accessibility calls it. The title is what
-/// makes the separator's id stable (`OwnItems.separatorID`), so the planner can find it.
+/// What the separator's pipe looks like on the bar and what Accessibility calls it. The title is
+/// what makes its id stable (`OwnItems.separatorID`), so the core can find it.
 @MainActor
 enum SeparatorMark {
     static func apply(to item: NSStatusItem) {

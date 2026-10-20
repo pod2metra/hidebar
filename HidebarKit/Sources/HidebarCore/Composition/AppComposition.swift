@@ -1,21 +1,9 @@
-/// The layout to start a session with and what to tell the user about it.
-public struct StartupLayout: Equatable, Sendable {
-    public let layout: Layout
-    public let notice: String?
-}
-
-/// Why `AppComposition.apply` did not start. Nothing was moved or saved.
-public enum ApplyRefusal: Equatable, Sendable {
-    /// An icon clicked earlier is still away from its place and could not be put back, so a plan
-    /// made now would be undone by the late return.
-    case displacedIconPending
-}
-
 /// The order in which the app's parts work together; the AppKit layer only calls it.
 ///
-/// Icons the separator pushed off screen cannot be seen, located or dragged, so everything that
-/// reads or moves them runs with the separator revealed, then puts it back the way it was.
-/// The app's own status items are kept out of the layout and out of move plans (`OwnItems`).
+/// Icons the pipe pushed off screen cannot be seen, located or dragged, so everything that reads or
+/// moves them runs with the pipe revealed. Where the pipe ends up is decided by one thing, the
+/// user's wish (`isCollapsed`): after a reveal it hides iff the user collapsed the section.
+/// The app's own status items are never clicked or moved (`OwnItems`).
 @MainActor
 public final class AppComposition {
     /// Gap between two reads of the separator's frame while the bar re-lays out.
@@ -29,19 +17,15 @@ public final class AppComposition {
     private let locator: any ItemLocating
     private let uptime: Uptime
     private let discover: @MainActor () -> [DiscoveredItem]
-    private let discoverInBackground: @Sendable () async -> [DiscoveredItem]
-    /// Reads in `discoverRevealedInBackground` that have not finished.
-    private var backgroundReads = 0
-    /// Whether the separator was hiding when the first of those reads began.
-    private var revealedForBackgroundReads = false
+    /// What the user asked for: the section left of the pipe hidden. The app starts expanded.
+    public private(set) var isCollapsed = false
 
     /// `locator` reads the separator's frame to tell when the bar has settled. `discover` reads
-    /// the bar on the main thread, where moves run; `discoverInBackground` reads it anywhere else.
+    /// the bar on the main thread, where moves run.
     public init(
         separator: SeparatorController, clickProxy: ClickProxy, clock: any MoveClock,
         locator: any ItemLocating, uptime: @escaping Uptime = systemUptimeMilliseconds,
-        discover: @escaping @MainActor () -> [DiscoveredItem],
-        discoverInBackground: @escaping @Sendable () async -> [DiscoveredItem]
+        discover: @escaping @MainActor () -> [DiscoveredItem]
     ) {
         self.separator = separator
         self.clickProxy = clickProxy
@@ -49,19 +33,38 @@ public final class AppComposition {
         self.locator = locator
         self.uptime = uptime
         self.discover = discover
-        self.discoverInBackground = discoverInBackground
         // The proxy's own timeout restore would drag towards an off-screen anchor.
         clickProxy.onRestoreTimeout = { [weak self] in self?.restoreIfDisplaced() }
     }
 
-    /// Runs `body` with the separator showing everything. A hiding separator is shown first,
-    /// given time to settle, and hidden again afterwards; a shown one is left alone.
+    /// Hides everything left of the pipe, unless the arrow would be stranded by that. On a refusal
+    /// nothing is written and the wish stays as it was. The positions are the items' left edges.
+    public func collapse(pipeX: Double?, arrowX: Double?) -> CollapseRefusal? {
+        let refusal = CollapseGuard.check(pipeX: pipeX, arrowX: arrowX)
+        if refusal != nil { return refusal }
+        isCollapsed = true
+        separator.hide()
+        return nil
+    }
+
+    /// Shows what is left of the pipe and keeps it shown.
+    public func expand() {
+        isCollapsed = false
+        separator.show()
+    }
+
+    /// Runs `body` with the pipe showing everything. A hiding pipe is shown first, given time to
+    /// settle, and hidden again afterwards if the section is collapsed; a shown one is left alone.
     public func withRevealed<Result>(_ body: () -> Result) -> Result {
         guard separator.state == .hiding else { return body() }
         separator.show()
         awaitSettledBar()
-        defer { separator.hide() }
+        defer { hideIfCollapsed() }
         return body()
+    }
+
+    private func hideIfCollapsed() {
+        if isCollapsed { separator.hide() }
     }
 
     /// The bar has settled once the separator's frame is the same in two reads in a row. An
@@ -82,68 +85,6 @@ public final class AppComposition {
         return current != frame
     }
 
-    /// Every item on the bar, hidden ones included, for a group panel to match its rows against.
-    public func discoverRevealed() -> [DiscoveredItem] {
-        withRevealed { discover() }
-    }
-
-    /// `discoverRevealed` with the read off the main thread. The bar stays revealed while it runs,
-    /// so reads that overlap share the reveal and the last one to finish hides the separator again.
-    public func discoverRevealedInBackground() async -> [DiscoveredItem] {
-        backgroundReads += 1
-        if separator.state == .hiding {
-            separator.show()
-            revealedForBackgroundReads = true
-            awaitSettledBar()
-        }
-        let items = await discoverInBackground()
-        backgroundReads -= 1
-        if backgroundReads == 0 && revealedForBackgroundReads {
-            revealedForBackgroundReads = false
-            separator.hide()
-        }
-        return items
-    }
-
-    /// Flips the separator and answers with its new state. Ignored only while a background read has
-    /// revealed the bar itself, because the end of that read would undo the choice.
-    public func toggleSeparator() -> SeparatorState {
-        if !revealedForBackgroundReads { separator.toggle() }
-        return separator.state
-    }
-
-    /// The bar as `SettingsViewModel` plans moves on it.
-    public func barItems() -> [MenuBarItem] {
-        OwnItems.planItems(discover())
-    }
-
-    /// The stored layout, topped up with the icons on the bar now. A layout that cannot be read
-    /// or understood becomes an empty one, with the reason in `notice`; the store is never written.
-    ///
-    /// Throws only what `LayoutReconciler` throws, which a valid stored layout cannot provoke.
-    public func startupLayout(from store: LayoutStore) throws -> StartupLayout {
-        let stored: LayoutLoadResult
-        do {
-            stored = try store.load()
-        } catch let error as LayoutStoreError {
-            return StartupLayout(layout: .empty, notice: UserMessages.text(for: error))
-        }
-        let found = OwnItems.foreign(discoverRevealed())
-        return StartupLayout(
-            layout: try LayoutReconciler.reconcile(discovered: found, stored: stored.layout),
-            notice: UserMessages.notice(for: stored.status))
-    }
-
-    /// Arranges the bar after the draft of `settings`. An icon still displaced by a click goes home
-    /// first: its late return would drag it to an anchor the new arrangement has moved.
-    public func apply(_ settings: SettingsViewModel) -> ApplyRefusal? {
-        withRevealed { () -> ApplyRefusal? in
-            guard clickProxy.restoreIfDisplaced() != .failed else { return .displacedIconPending }
-            settings.apply()
-            return nil
-        }
-    }
-
     /// Clicks a hidden icon. An icon still away from an earlier click is brought home first.
     public func click(_ id: MenuBarItemID) -> ClickOutcome {
         withRevealed {
@@ -152,7 +93,7 @@ public final class AppComposition {
         }
     }
 
-    /// Brings a displaced icon home. Call when a group panel opens or closes.
+    /// Brings a displaced icon home. Call when a panel closes.
     @discardableResult
     public func restoreIfDisplaced() -> RestoreOutcome {
         guard clickProxy.hasDisplacedItem else { return .nothingToRestore }

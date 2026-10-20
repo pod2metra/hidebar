@@ -1,25 +1,5 @@
 /// The sentences the app shows when something did not work out, so the windows only display them.
 public enum UserMessages {
-    public static func text(for failure: ApplyFailure, names: ItemNames) -> String {
-        switch failure {
-        case .separatorUnavailable:
-            "The Hidebar separator is not on the menu bar or cannot be moved, so the icons were not arranged. Grant Accessibility access and try again."
-        case .moveStopped(let index, let item, let outcome):
-            "Step \(index + 1) failed: \(names.name(of: item)) \(text(for: outcome)). Nothing was saved."
-        case .storeRefused(let error):
-            text(for: error)
-        case .storeFailed(let reason):
-            "The layout could not be saved: \(reason)"
-        }
-    }
-
-    public static func text(for refusal: ApplyRefusal) -> String {
-        switch refusal {
-        case .displacedIconPending:
-            "An icon you clicked earlier could not be put back in its place yet, so nothing was moved or saved. Try again in a moment."
-        }
-    }
-
     /// What to tell the user after a click on a hidden icon; `nil` when it went through.
     public static func text(for outcome: ClickOutcome) -> String? {
         switch outcome {
@@ -49,39 +29,13 @@ public enum UserMessages {
         }
     }
 
-    public static func text(for outcome: MoveOutcome) -> String {
-        switch outcome {
-        case .moved: "moved"
-        case .unmovable: "cannot be moved"
-        case .failed: "did not end up in place"
+    public static func text(for refusal: CollapseRefusal) -> String {
+        switch refusal {
+        case .separatorNotOnBar:
+            "Hidebar's separator is not on the menu bar, so the icons were left shown."
+        case .arrowWouldHide:
+            "Hidebar's arrow is left of the separator and would be hidden with the icons, and you could not show them again. Drag the arrow to the right of the separator, then try again."
         }
     }
 
-    public static func text(for error: LayoutStoreError) -> String {
-        switch error {
-        case .unsupportedVersion(let version), .refusingToOverwriteNewerVersion(let version):
-            "The saved layout (version \(version)) was written by a different version of Hidebar. It is left untouched and nothing will be saved."
-        }
-    }
-
-    /// For a rejected edit of the draft, such as a drop that is not allowed.
-    public static func text(forEditError error: any Error, names: ItemNames) -> String {
-        guard let edit = error as? LayoutEditError else { return "The change was rejected: \(error)" }
-        switch edit {
-        case .unknownItem: return "That icon is no longer in the layout."
-        case .unknownGroup: return "That group no longer exists."
-        case .notHidable(let id): return "\(names.name(of: id)) must stay on the menu bar."
-        case .indexOutOfRange: return "The icon cannot be dropped there."
-        }
-    }
-
-    /// Something to tell the user about how the stored layout was loaded; `nil` when all is well.
-    public static func notice(for status: LayoutLoadStatus) -> String? {
-        switch status {
-        case .missing, .loaded:
-            nil
-        case .recoveredFromCorruption:
-            "The saved layout could not be read, so Hidebar started with an empty one. The unreadable data is kept as a backup."
-        }
-    }
 }

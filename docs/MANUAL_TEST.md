@@ -15,77 +15,72 @@ make run                   # builds, signs, quits the old copy and launches
 Launch the app only through `make run`: a copy built elsewhere (for example by Xcode's
 Run button) has another signature and looks ungranted. See `docs/XCODE_SETUP.md`.
 
+The separator is two status items: the pipe (a thin vertical line) and the arrow right of
+it. Everything left of the pipe is what the arrow hides.
+
 ## 1. Permissions and onboarding
 
 | # | Check | Expected | Result |
 |---|---|---|---|
 | 1.1 | First launch with no permissions | Onboarding lists only Accessibility; its button opens the Accessibility pane. No Screen Recording prompt appears | |
-| 1.2 | Grant Accessibility only, switch back to the app | Onboarding closes without a restart; groups show app names, rows are clickable | |
-| 1.3 | Grant Screen Recording only | Onboarding still lists Accessibility; rows are not clickable; nothing is moved | |
-| 1.4 | No permissions at all | Hiding with the separator still works; nothing is moved | |
-| 1.5 | Revoke Screen Recording while running | Panels fall back to app names; no crash | |
-| 1.6 | Right-click the toggle icon without Screen Recording | Menu has "Show Icon Images…"; it shows the system prompt and opens the Screen Recording pane | |
-| 1.7 | Right-click the toggle icon with Screen Recording granted | Menu has no "Show Icon Images…" item | |
+| 1.2 | Grant Accessibility only, switch back to the app | Onboarding closes without a restart; the strip shows app names, its rows are clickable | |
+| 1.3 | Grant Screen Recording only | Onboarding still lists Accessibility; strip rows are not clickable; nothing is moved | |
+| 1.4 | No permissions at all | Hiding with the arrow still works; nothing is moved or clicked | |
+| 1.5 | Revoke Screen Recording while running | The strip falls back to app names; no crash | |
 
-## 2. Hiding
+## 2. Collapse and expand
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 2.1 | Click the separator chevron | Icons left of it are pushed off-screen; click again and they come back | |
-| 2.2 | Hide, then `kill -9` the app, then relaunch | All icons are visible again after relaunch | |
-| 2.3 | Hide, then quit normally | All icons are visible after quit | |
+| 2.1 | Click the arrow | Icons left of the pipe are pushed off-screen; the arrow stays visible and now points left. Click again and they come back; the arrow points right | |
+| 2.2 | Collapse, then `kill -9` the app, then relaunch | All icons are visible again after relaunch | |
+| 2.3 | Collapse, then quit normally | All icons are visible after quit | |
 | 2.4 | Clock and Control Center | Never moved or hidden | |
+| 2.5 | Hold Command and drag the arrow to the left of the pipe, then click the arrow | The icons stay shown and a message says the arrow would be hidden with them; nothing is hidden. Drag the arrow back to the right of the pipe: the click collapses | |
+| 2.6 | Hold Command and drag an icon from the right of the pipe to its left while collapsed, then expand | The icon goes off-screen with the others and comes back on expand | |
+| 2.7 | Hold Command and drag an icon from the left of the pipe to its right | The icon stays visible while collapsed | |
 
-## 3. Discovery and identity (needs Accessibility)
-
-| # | Check | Expected | Result |
-|---|---|---|---|
-| 3.1 | Open Settings | Every third-party icon is listed with its app name | |
-| 3.2 | Which AX attribute names an item (`AXTitle`, then `AXDescription`) | Names are stable across relaunches; record apps with empty names | |
-| 3.3 | Hide icons with the separator, then open Settings | Hidden icons are still listed (their windows may report `onscreen=false`) | |
-| 3.4 | A frozen or busy app with a menu bar icon | Discovery does not hang the app (AX messaging timeout is 0.3 s per app); user input is never suppressed for more than 10 seconds in total, even if a move hangs. Opening a group panel and switching apps (which refreshes the overflow strip) do not freeze the menu bar while the frozen app is read; clicking the toggle during a panel's read is ignored | |
-| 3.5 | Hide, then immediately open a group panel or Settings | Positions are read after the bar has re-laid out: the reveal waits until the separator's frame is the same in two reads 25 ms apart, for about 1 second (one extra frame read). Record the usual wait and any case where an icon was read at a stale position | |
-
-## 4. Moving and settings (needs Accessibility)
+## 3. Menu and help
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 4.1 | Drag an icon from visible to hidden in Settings, press Apply | The real icon moves left of the separator; the cursor returns to where it was | |
-| 4.2 | Reorder two visible icons, Apply | The bar matches the new order | |
-| 4.3 | Type, press modifiers or move the mouse during Apply | Keyboard and mouse input are ignored until the move ends, then work normally; our own synthetic events still pass | |
-| 4.4 | Try to hide a non-hidable item | The drop is disabled | |
-| 4.5 | Apply while the separator is hiding | Icons are revealed for the move and hidden again afterwards | |
-| 4.6 | Move fails (for example, the app quits mid-move) | Draft is kept, an error names the failed step, nothing is saved | |
-| 4.7 | Apply a plan while an app resizes its icon (for example, a clock or a counter that changes width) | If an icon is not on its side of its anchor once the whole plan has run, Apply reports that step as not in place, keeps the draft and saves nothing | |
+| 3.1 | Right-click the pipe, then the arrow | The same menu opens under each | |
+| 3.2 | Control-click and middle-click the arrow | The same menu opens; a plain left click collapses or expands and opens no menu | |
+| 3.3 | Open the menu without Screen Recording | Items: "Show Icon Images…", "How to Use Hidebar…", a separator, "Quit Hidebar". "Show Icon Images…" shows the system prompt and opens the Screen Recording pane | |
+| 3.4 | Open the menu with Screen Recording granted | No "Show Icon Images…" item | |
+| 3.5 | Choose "How to Use Hidebar…" | The app comes to the front and a window explains the arrow, the pipe, Command-drag, the menu, the overflow strip and the permissions; OK closes it | |
+| 3.6 | Choose "Quit Hidebar" while collapsed | The app quits and all icons are visible | |
+| 3.7 | Collapse, then open the menu from the arrow | The menu opens although the pipe is stretched | |
 
-## 5. Groups (needs Accessibility; snapshots need Screen Recording)
-
-| # | Check | Expected | Result |
-|---|---|---|---|
-| 5.1 | Create a group with a symbol from the picker | A new status item with that SF Symbol appears to the right of the separator (this also verifies the unconfirmed assumption that a smaller `NSStatusItem Preferred Position` value means closer to the right edge) | |
-| 5.1a | Run `swift run --package-path Spikes/MoveSpike MoveSpike list` with the app running | The separator and every group item are listed with distinct titles | |
-| 5.2 | Move icons into the group, Apply, click the group icon | A panel drops down with snapshots of the group's icons | |
-| 5.3 | Click an icon in the panel | Its own menu opens; after the menu closes the icon goes back into hiding | |
-| 5.4 | Click an icon whose click opens no menu | The icon is restored within about 10 seconds | |
-| 5.4a | Keep an icon's menu open longer than 10 seconds | The icon stays where it is while any menu is open (an open menu window is detected on the pop-up menu layer); about 10 seconds after the menu closes it goes back, and the menu is never closed under you. A menu kept open (or a foreign window stuck on the menu layer) postpones the return for at most 120 seconds in all; after that the icon goes back regardless | |
-| 5.5 | Delete a group | Its icons move to hidden; none disappear | |
-| 5.6 | Change a group's symbol | The status item updates | |
-
-## 6. Overflow strip
+## 4. Discovery and identity (needs Accessibility)
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 6.1 | On a Mac with a notch, add icons until some fall behind the notch | Those icons appear in the strip under the bar | |
-| 6.2 | Open an app with long menus (Xcode) | Icons covered by the menus appear in the strip | |
-| 6.3 | Scroll the strip with a mouse wheel, Shift+wheel and a trackpad | It scrolls horizontally with all three; tune `pointsPerWheelLine` (20) if it feels off | |
-| 6.4 | Toggle natural scrolling | The strip follows the system direction | |
-| 6.5 | Click an icon in the strip, including the one right next to the separator | Every strip click goes through the same reveal and return as a panel click. Its menu opens; the icon returns afterwards. The icon next to the separator is dragged over its next neighbour (or clicked in place when it has none), so the click does not fail with a reveal error | |
+| 4.1 | Names of the strip rows (`AXTitle`, then `AXDescription`) | Names are stable across relaunches; record apps with empty names | |
+| 4.2 | Collapse, then fill the bar until icons overflow | Icons pushed off-screen by the pipe are still read (their windows may report `onscreen=false`) and are not shown in the strip | |
+| 4.3 | A frozen or busy app with a menu bar icon | Discovery does not hang the app (AX messaging timeout is 0.3 s per app); user input is never blocked and no step of a click starts after 10 seconds in total. Switching apps (which refreshes the overflow strip) does not freeze the menu bar while the frozen app is read | |
+| 4.4 | Collapse, then immediately click an icon in the strip | Positions are read after the bar has re-laid out: the reveal waits until the pipe's frame is the same in two reads 25 ms apart, for about 1 second. Record the usual wait and any case where an icon was read at a stale position | |
 
-## 7. Platforms
+## 5. Overflow strip
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 7.1 | macOS 26 | All sections above | |
-| 7.2 | macOS 15 (minimum target) | Sections 1–5 | |
-| 7.3 | Two displays | Only the main display's menu bar items are listed and moved | |
-| 7.4 | A second display arranged to the LEFT of the main one, top edges aligned | Known limitation: its copies of the icons look like hidden items; they stay unmanaged (never saved or moved) but may show as non-clickable duplicates in the overflow strip | |
+| 5.1 | On a Mac with a notch, add icons until some fall behind the notch | Those icons appear in the strip under the bar | |
+| 5.2 | Open an app with long menus (Xcode) | Icons covered by the menus appear in the strip | |
+| 5.3 | Scroll the strip with a mouse wheel, Shift+wheel and a trackpad | It scrolls horizontally with all three; tune `pointsPerWheelLine` (20) if it feels off | |
+| 5.4 | Toggle natural scrolling | The strip follows the system direction | |
+| 5.5 | Click an icon in the strip, including the one right next to the pipe | Its menu opens; the icon returns afterwards. The icon next to the pipe is dragged over its next neighbour (or clicked in place when it has none), so the click does not fail with a reveal error | |
+| 5.6 | Click an icon whose click opens no menu | The icon is restored within about 10 seconds | |
+| 5.7 | Keep an icon's menu open longer than 10 seconds | The icon stays where it is while any menu is open (an open menu window is detected on the pop-up menu layer); about 10 seconds after the menu closes it goes back, and the menu is never closed under you. A menu kept open (or a foreign window stuck on the menu layer) postpones the return for at most 120 seconds in all; after that the icon goes back regardless | |
+| 5.8 | Click an icon in the strip while collapsed | The icon's menu opens; afterwards the icon goes back and the section is hidden again | |
+| 5.9 | Click a strip row without Accessibility | The row is not clickable; nothing is moved | |
+| 5.10 | While a click is running, type and move the mouse | Input is never blocked; the cursor is put back where it was when the click ends | |
+
+## 6. Platforms
+
+| # | Check | Expected | Result |
+|---|---|---|---|
+| 6.1 | macOS 26 | All sections above | |
+| 6.2 | macOS 15 (minimum target) | Sections 1–5 | |
+| 6.3 | Two displays | Only the main display's menu bar items are listed and moved | |
+| 6.4 | A second display arranged to the LEFT of the main one, top edges aligned | Known limitation: its copies of the icons look like hidden items; they stay unmanaged (never clicked) but may show as non-clickable duplicates in the overflow strip | |

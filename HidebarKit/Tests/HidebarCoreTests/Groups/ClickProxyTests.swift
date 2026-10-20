@@ -14,7 +14,7 @@ import Testing
     ]
 
     init() {
-        gate = InputGate(uptime: bar.uptime.reader)
+        deadline = MoveDeadline(uptime: bar.uptime.reader)
         place("sep", x: 0, width: 20)
         place("a", x: 100)
         place("b", x: 120)
@@ -22,10 +22,10 @@ import Testing
     }
 
     private let timer = ManualClock()
-    private let gate: InputGate
+    private let deadline: MoveDeadline
 
     private var executor: MoveExecutor {
-        MoveExecutor(poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate)
+        MoveExecutor(poster: bar, locator: bar, windows: bar, clock: bar, deadline: deadline)
     }
 
     private func proxy(
@@ -34,7 +34,7 @@ import Testing
     ) -> ClickProxy {
         ClickProxy(
             executor: executor, poster: bar, locator: locator ?? bar, separator: moveID("sep"),
-            revealSide: revealSide, clock: timer, inputGate: gate, isMenuOpen: { false },
+            revealSide: revealSide, clock: timer, deadline: deadline, isMenuOpen: { false },
             restoreTimeout: timeout)
     }
 
@@ -237,41 +237,40 @@ import Testing
         #expect(!proxy.hasDisplacedItem)
     }
 
-    // MARK: input gate
+    // MARK: deadline
 
-    @Test func userInputStaysSuppressedFromTheRevealThroughTheCursorRestore() {
-        bar.gate = gate
+    @Test func deadlineIsClosedAfterAClick() {
         moves([1: 22])
         #expect(proxy().click(moveID("a"), among: all) == .clicked)
-        // Every lookup, wait, cursor access and posted event of the click was sampled. The first
-        // sample is the lookup that decides whether to refuse, before any event can be posted.
-        #expect(bar.gateSamples.count == bar.lookups + bar.cursorReads + bar.log.count)
-        #expect(bar.gateSamples.dropFirst().allSatisfy { $0 })
-        #expect(!gate.suppressUserInput)
+        bar.uptime.advance(by: MoveDeadline.defaultBudgetMilliseconds)
+        #expect(!deadline.isOverdue)
     }
 
-    @Test func gateIsReleasedWhenTheRevealFails() {
+    @Test func deadlineIsClosedWhenTheRevealFails() {
         #expect(proxy().click(moveID("a"), among: all) == .revealFailed)
-        #expect(!gate.suppressUserInput)
+        bar.uptime.advance(by: MoveDeadline.defaultBudgetMilliseconds)
+        #expect(!deadline.isOverdue)
     }
 
-    @Test func clickIsNotPostedOnceTheGateHasRunOutAndTheItemStaysPendingForTheNextTry() {
+    @Test func clickIsNotPostedOnceTheDeadlineHasRunOutAndTheItemStaysPendingForTheNextTry() {
         bar.onWait = { [bar] count in
-            bar.uptime.advance(by: InputGate.defaultMaxSuppressionMilliseconds)
+            bar.uptime.advance(by: MoveDeadline.defaultBudgetMilliseconds)
             if count == 1 { bar.frames[moveID("a")] = ItemFrame(x: 22, y: 0, width: 10, height: 20) }
         }
         let proxy = proxy()
         #expect(proxy.click(moveID("a"), among: all) == .clickFailed)
         #expect(bar.clicks.isEmpty)
         #expect(proxy.hasDisplacedItem)
-        #expect(!gate.suppressUserInput)
+        bar.uptime.advance(by: MoveDeadline.defaultBudgetMilliseconds)
+        #expect(!deadline.isOverdue)
     }
 
-    @Test func gateIsReleasedWhenTheClickFails() {
+    @Test func deadlineIsClosedWhenTheClickFails() {
         bar.clickPosts = false
         moves([1: 22, 2: 110])
         #expect(proxy().click(moveID("a"), among: all) == .clickFailed)
-        #expect(!gate.suppressUserInput)
+        bar.uptime.advance(by: MoveDeadline.defaultBudgetMilliseconds)
+        #expect(!deadline.isOverdue)
     }
 
     // MARK: onRestoreTimeout

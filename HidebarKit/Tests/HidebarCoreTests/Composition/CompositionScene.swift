@@ -1,4 +1,5 @@
 import Foundation
+import Testing
 
 @testable import HidebarCore
 
@@ -11,11 +12,7 @@ final class CompositionScene {
     let bar = MoveFakeBar()
     /// Whether a menu is open; closed unless a test says otherwise.
     let menu = FakeMenuProbe()
-    let backing = InMemoryStore()
     let separator: SeparatorController
-    /// What the off-main discovery returns, and its reads held until a test lets them finish.
-    let backgroundFound = [discovered("bg", x: 100, windowID: 9)]
-    let background: BackgroundReads
 
     /// What the fake discovery returns.
     var found: [DiscoveredItem] = []
@@ -27,29 +24,23 @@ final class CompositionScene {
     var normal: Double { SeparatorController.normalLength }
     var hiding: Double { SeparatorController.hidingLength }
 
-    private(set) lazy var gate = InputGate(uptime: bar.uptime.reader)
+    private(set) lazy var deadline = MoveDeadline(uptime: bar.uptime.reader)
 
     private(set) lazy var proxy = ClickProxy(
         executor: MoveExecutor(
-            poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate),
+            poster: bar, locator: bar, windows: bar, clock: bar, deadline: deadline),
         poster: bar, locator: bar, separator: OwnItems.separatorID, revealSide: .rightOf, clock: timer,
-        inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() })
+        deadline: deadline, isMenuOpen: { [menu] in menu.isMenuOpen() })
 
     private(set) lazy var composition = AppComposition(
         separator: separator, clickProxy: proxy, clock: bar, locator: bar, uptime: bar.uptime.reader,
         discover: { [unowned self] in
             lengthAtDiscovery.append(item.length)
             return found
-        },
-        discoverInBackground: readInBackground)
-
-    private var readInBackground: @Sendable () async -> [DiscoveredItem] {
-        { [background] in await background.read() }
-    }
+        })
 
     init() {
         separator = SeparatorController(item: item, clock: timer)
-        background = BackgroundReads(returning: backgroundFound)
         bar.frames[OwnItems.separatorID] = ItemFrame(x: 0, y: 0, width: 20, height: 20)
         for (index, name) in ["a", "b", "c"].enumerated() {
             bar.frames[moveID(name)] = ItemFrame(x: 100 + Double(index) * 20, y: 0, width: 10, height: 20)
@@ -64,6 +55,11 @@ final class CompositionScene {
                 place(move.id, x: move.x)
             }
         }
+    }
+
+    /// The user collapses the section with the arrow right of the pipe.
+    func collapse() {
+        #expect(composition.collapse(pipeX: 100, arrowX: 200) == nil)
     }
 
     /// Wait number `count` since creation moves item `name` to `x`.

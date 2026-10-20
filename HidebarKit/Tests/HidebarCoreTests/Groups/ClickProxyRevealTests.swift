@@ -7,10 +7,10 @@ import Testing
 @MainActor @Suite struct ClickProxyRevealTests {
     private let bar = MoveFakeBar()
     private let timer = ManualClock()
-    private let gate: InputGate
+    private let deadline: MoveDeadline
 
     init() {
-        gate = InputGate(maxSuppressionMilliseconds: 1000, uptime: bar.uptime.reader)
+        deadline = MoveDeadline(budgetMilliseconds: 1000, uptime: bar.uptime.reader)
     }
 
     private func place(_ name: String, x: Double, width: Double = 10) {
@@ -20,9 +20,9 @@ import Testing
     private func proxy(revealSide: DropSide = .rightOf) -> ClickProxy {
         ClickProxy(
             executor: MoveExecutor(
-                poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate),
+                poster: bar, locator: bar, windows: bar, clock: bar, deadline: deadline),
             poster: bar, locator: bar, separator: moveID("sep"), revealSide: revealSide, clock: timer,
-            inputGate: gate, isMenuOpen: { false })
+            deadline: deadline, isMenuOpen: { false })
     }
 
     private func separator(x: Double = 0) -> DiscoveredItem {

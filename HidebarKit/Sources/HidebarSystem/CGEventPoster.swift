@@ -2,8 +2,7 @@ import CoreGraphics
 import Foundation
 import HidebarCore
 
-/// Posts real mouse events. Every event carries `InputGate.syntheticEventTag`, so the input
-/// gate lets it pass and drops the user's own input.
+/// Posts real mouse events.
 @MainActor
 public struct CGEventPoster: EventPosting {
     public init() {}

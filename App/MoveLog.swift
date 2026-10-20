@@ -5,15 +5,6 @@ import os
 /// The wrappers delegate to the real poster, locator and window finder and only log.
 private let moveLog = Logger(subsystem: "app.hidebar.Hidebar", category: "move")
 
-/// What `Apply` was asked to arrange and how it ended.
-func logApply(desired: [MenuBarItemID], refusal: ApplyRefusal?, failure: ApplyFailure?) {
-    let order = desired.map { "\($0.ownerBundleID)/\($0.title)" }.joined(separator: " | ")
-    moveLog.debug("apply desired=[\(order, privacy: .public)]")
-    moveLog.debug(
-        "apply verdict refusal=\(String(describing: refusal), privacy: .public) failure=\(String(describing: failure), privacy: .public)"
-    )
-}
-
 @MainActor
 struct LoggingPoster: EventPosting {
     let base: any EventPosting

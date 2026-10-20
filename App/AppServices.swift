@@ -6,40 +6,18 @@ import HidebarSystem
 @MainActor
 final class AppServices {
     let permissions = TCCPermissionChecker()
-    let store = LayoutStore(store: UserDefaultsStore())
     let snapshotter = SCKSnapshotter()
     /// App names for everything the user reads; identities stay bundle ids.
     let names = ItemNames(apps: WorkspaceAppNames())
-    let toggleItem: NSStatusItemAdapter
-    let groupItems = GroupStatusItems()
-    let separatorItem: NSStatusItemAdapter
-    let separator: SeparatorController
+    let separatorItems = SeparatorItems(clock: DispatchSchedulingClock())
     let composition: AppComposition
-    /// The one settings drags with; it shares the input gate with the click proxy.
-    let executor: MoveExecutor
-    let clickProxy: ClickProxy
     /// Items on the bar as they are now, with no reveal; the overflow strip reads the visible side.
     let discovery: ItemDiscovery
     /// Where `discovery` runs when the main thread must stay free.
     let background = BackgroundQueue()
     let menus = MenusExtent()
 
-    private let inputGate = InputGate()
-    private var eventTap: EventTapInputGate
-
     init() {
-        // Everything left of the separator is hidden, so the toggle and the group icons must be
-        // right of it: their positions are written before the items are created.
-        StatusItemSeeding().seedFixedItems()
-        toggleItem = NSStatusItemAdapter(
-            autosaveName: AutosaveNames.toggle, symbolName: SeparatorState.shown.toggleSymbolName)
-        groupItems.rebuild((try? store.load())?.layout.groups ?? [])
-        separatorItem = NSStatusItemAdapter(autosaveName: AutosaveNames.separator)
-        separator = SeparatorController(item: separatorItem, clock: DispatchSchedulingClock())
-        separator.prepareForLaunch()
-        SeparatorMark.apply(to: separatorItem.item)
-
-        eventTap = EventTapInputGate(gate: inputGate)
         let windows = CGWindowListSource()
         let reader = AXMenuBarReader(tree: AXTreeReader(), bundleIDOfPID: RunningApps.bundleID)
         let discovery = ItemDiscovery(
@@ -51,32 +29,18 @@ final class AppServices {
         let windowLocator = LoggingWindows(
             base: DiscoveryWindowLocator(
                 discover: { discovery.discoverAll() }, windowList: windows))
+        let deadline = MoveDeadline()
         let executor = MoveExecutor(
             poster: poster, locator: locator, windows: windowLocator, clock: moveClock,
-            inputGate: inputGate)
+            deadline: deadline)
         let menuProbe = OpenMenuProbe(windowList: windows)
         let proxy = ClickProxy(
             executor: executor, poster: poster, locator: locator, separator: OwnItems.separatorID,
-            revealSide: .rightOf, clock: DispatchSchedulingClock(), inputGate: inputGate,
+            revealSide: .rightOf, clock: DispatchSchedulingClock(), deadline: deadline,
             isMenuOpen: { menuProbe.isMenuOpen() })
         composition = AppComposition(
-            separator: separator, clickProxy: proxy, clock: moveClock, locator: locator,
-            discover: { discovery.discover() },
-            discoverInBackground: { [background] in await discovery.discover(on: background) })
-        self.executor = executor
-        self.clickProxy = proxy
+            separator: separatorItems.controller, clickProxy: proxy, clock: moveClock, locator: locator,
+            discover: { discovery.discover() })
         self.discovery = discovery
-    }
-
-    func makeSettingsModel(layout: Layout) -> SettingsViewModel {
-        SettingsViewModel(
-            layout: layout, store: store, executor: executor, separator: OwnItems.separatorID,
-            barItems: { [composition] in composition.barItems() })
-    }
-
-    /// The event tap can only be created with Accessibility granted, so one made before the
-    /// grant is replaced once the permission is there.
-    func renewEventTapIfNeeded() {
-        eventTap = eventTap.isActive ? eventTap : EventTapInputGate(gate: inputGate)
     }
 }

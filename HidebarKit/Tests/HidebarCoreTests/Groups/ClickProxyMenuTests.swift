@@ -9,7 +9,7 @@ import Testing
     private let bar = MoveFakeBar()
     private let timer = ManualClock()
     private let menu = FakeMenuProbe()
-    private let gate = InputGate()
+    private let deadline = MoveDeadline()
     private let all = [
         discovered("a", x: 100, windowID: 1), discovered("b", x: 120, windowID: 2),
         discovered("c", x: 140, windowID: 3),
@@ -25,9 +25,9 @@ import Testing
     private func proxy(timeout: TimeInterval = 10, maxDisplacement: TimeInterval = 120) -> ClickProxy {
         ClickProxy(
             executor: MoveExecutor(
-                poster: bar, locator: bar, windows: bar, clock: bar, inputGate: gate),
+                poster: bar, locator: bar, windows: bar, clock: bar, deadline: deadline),
             poster: bar, locator: bar, separator: moveID("sep"), revealSide: .rightOf, clock: timer,
-            inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() }, restoreTimeout: timeout,
+            deadline: deadline, isMenuOpen: { [menu] in menu.isMenuOpen() }, restoreTimeout: timeout,
             maxDisplacement: maxDisplacement)
     }
 

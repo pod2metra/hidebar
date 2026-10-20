@@ -33,7 +33,7 @@ public struct ItemFrame: Hashable, Codable, Sendable {
     }
 }
 
-/// A menu bar item as observed right now. Not persisted: only `id` ends up in a `Layout`.
+/// A menu bar item as observed right now. Not persisted.
 public struct MenuBarItem: Equatable, Sendable {
     public let id: MenuBarItemID
     public let frame: ItemFrame

@@ -11,7 +11,7 @@ import Testing
     private var poll: Int { AppComposition.settlePollMilliseconds }
 
     init() {
-        scene.separator.hide()
+        scene.collapse()
     }
 
     @Test func aFrameThatChangesIsWaitedOutAndTheBodyRunsOnceItHoldsStill() {

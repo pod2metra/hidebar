@@ -2,7 +2,7 @@
 public enum Permission: Sendable, CaseIterable {
     /// Moving icons and identifying their real owners.
     case accessibility
-    /// Snapshots of icons for the group panel.
+    /// Snapshots of icons for the overflow strip.
     case screenRecording
 
     /// Onboarding asks only for required permissions; the others are offered on demand.
@@ -11,7 +11,7 @@ public enum Permission: Sendable, CaseIterable {
     }
 }
 
-/// How the group panel renders a hidden icon.
+/// How the overflow strip renders an icon.
 public enum PanelPresentation: Sendable, Equatable {
     /// A screenshot of the icon.
     case snapshots
