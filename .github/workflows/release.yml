@@ -1,0 +1,189 @@
+name: Release
+
+# Pushing a tag vMAJOR.MINOR.PATCH builds, signs, notarizes and publishes Hidebar, then updates
+# the Homebrew tap. See docs/RELEASING.md for the secrets this needs.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (defaults to the ref the workflow runs on)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  # Same toolchain pin as ci.yml: HidebarKit needs Xcode 27.
+  DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  release:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tag '$TAG' is not vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          {
+            echo "VERSION=${TAG#v}"
+            echo "KEYCHAIN_PATH=$RUNNER_TEMP/hidebar-release.keychain-db"
+            echo "APP=build/dd/Build/Products/Release/Hidebar.app"
+            echo "DMG=build/Hidebar-${TAG#v}.dmg"
+          } >> "$GITHUB_ENV"
+          xcodebuild -version
+
+      - name: Import signing certificate
+        env:
+          DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          keychain_password="$(openssl rand -base64 32)"
+          p12="$RUNNER_TEMP/developer-id.p12"
+          trap 'rm -f "$p12"' EXIT
+
+          security create-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
+
+          printf '%s' "$DEVELOPER_ID_P12" | base64 --decode > "$p12"
+          security import "$p12" -k "$KEYCHAIN_PATH" -P "$DEVELOPER_ID_P12_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$keychain_password" "$KEYCHAIN_PATH" > /dev/null
+
+          # Put the temporary keychain first in the user search list so codesign finds it.
+          keychains=("$KEYCHAIN_PATH")
+          while IFS= read -r line; do
+            keychains+=("$(printf '%s' "$line" | sed -e 's/^ *"//' -e 's/"$//')")
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "${keychains[@]}"
+
+          # Pin the identity by hash, restricted to our team, so a stray certificate cannot win.
+          identity="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | awk -v team="($APPLE_TEAM_ID)" \
+              '/Developer ID Application/ && index($0, team) { print $2; exit }')"
+          if [ -z "$identity" ]; then
+            echo "no valid Developer ID Application identity for the configured team" >&2
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: Build and sign the app
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: bash scripts/package.sh release-app
+
+      - name: Notarize and staple the app
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+        run: bash scripts/notarize.sh "$APP"
+
+      - name: Verify the app with Gatekeeper
+        run: |
+          set -euo pipefail
+          assessment="$(spctl -a -vv -t exec "$APP" 2>&1)"
+          echo "$assessment"
+          [[ "$assessment" == *"Notarized Developer ID"* ]]
+
+      - name: Build and sign the DMG
+        run: bash scripts/package.sh release-dmg
+
+      - name: Notarize and staple the DMG
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+        run: bash scripts/notarize.sh "$DMG"
+
+      - name: Verify the DMG with Gatekeeper
+        id: verify
+        run: |
+          set -euo pipefail
+          spctl -a -vv -t open --context context:primary-signature "$DMG"
+          sha256="$(shasum -a 256 "$DMG" | awk '{ print $1 }')"
+          if [[ ! "$sha256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "bad sha256 for $DMG: '$sha256'" >&2
+            exit 1
+          fi
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$DMG" --clobber
+          else
+            notes="$RUNNER_TEMP/release-notes.md"
+            bash scripts/release_notes.sh "$TAG" > "$notes"
+            gh release create "$TAG" "$DMG" --verify-tag \
+              --title "Hidebar $VERSION" --notes-file "$notes"
+          fi
+
+      - name: Update Homebrew tap
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+          SHA256: ${{ steps.verify.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git --hostname github.com
+          gh repo clone pod2metra/homebrew-tap "$RUNNER_TEMP/tap"
+
+          mkdir -p "$RUNNER_TEMP/tap/Casks"
+          cask="$RUNNER_TEMP/tap/Casks/hidebar.rb"
+          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$SHA256/" \
+            packaging/hidebar.rb.template > "$cask"
+          if grep -q '@[A-Z0-9]*@' "$cask"; then
+            echo "cask still has unfilled placeholders" >&2
+            exit 1
+          fi
+          ruby -c "$cask"
+
+          cd "$RUNNER_TEMP/tap"
+          git add Casks/hidebar.rb
+          if git diff --cached --quiet; then
+            echo "cask already up to date"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore: update hidebar to $VERSION"
+          git push origin HEAD
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -n "${KEYCHAIN_PATH:-}" ] && [ -e "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
+          rm -f "$RUNNER_TEMP/developer-id.p12"

@@ -1,0 +1,17 @@
+cask "hidebar" do
+  version "@VERSION@"
+  sha256 "@SHA256@"
+
+  url "https://github.com/pod2metra/hidebar/releases/download/v#{version}/Hidebar-#{version}.dmg"
+  name "Hidebar"
+  desc "Menu bar utility that hides menu bar icons behind a single separator"
+  homepage "https://pod2metra.github.io/hidebar"
+
+  depends_on macos: ">= :sequoia"
+
+  app "Hidebar.app"
+
+  uninstall quit: "app.hidebar.Hidebar"
+
+  zap trash: "~/Library/Preferences/app.hidebar.Hidebar.plist"
+end
