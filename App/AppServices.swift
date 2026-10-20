@@ -18,6 +18,8 @@ final class AppServices {
     let clickProxy: ClickProxy
     /// Items on the bar as they are now, with no reveal; the overflow strip reads the visible side.
     let discovery: ItemDiscovery
+    /// Where `discovery` runs when the main thread must stay free.
+    let background = BackgroundQueue()
     let menus = MenusExtent()
 
     private let inputGate = InputGate()
@@ -52,7 +54,8 @@ final class AppServices {
             isMenuOpen: { menuProbe.isMenuOpen() })
         composition = AppComposition(
             separator: separator, clickProxy: proxy, clock: moveClock, locator: locator,
-            discover: { discovery.discover() })
+            discover: { discovery.discover() },
+            discoverInBackground: { [background] in await discovery.discover(on: background) })
         self.executor = executor
         self.clickProxy = proxy
         self.discovery = discovery

@@ -122,7 +122,8 @@ private final class OrderingBar: EventPosting, ItemLocating, MoveClock {
                             isMovable: true, isHidable: true),
                         isManaged: true)
                 }
-            })
+            },
+            discoverInBackground: { [DiscoveredItem]() })
         let model = SettingsViewModel(
             layout: try Layout(
                 visible: [moveID("x")], hidden: [moveID("a"), moveID("b")], groups: []),

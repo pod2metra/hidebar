@@ -22,22 +22,28 @@ import Testing
         }
     }
 
-    private func proxy(timeout: TimeInterval = 10) -> ClickProxy {
+    private func proxy(timeout: TimeInterval = 10, maxDisplacement: TimeInterval = 120) -> ClickProxy {
         ClickProxy(
             executor: MoveExecutor(poster: bar, locator: bar, clock: bar, inputGate: gate),
             poster: bar, locator: bar, separator: moveID("sep"), revealSide: .rightOf, clock: timer,
-            inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() }, restoreTimeout: timeout)
+            inputGate: gate, isMenuOpen: { [menu] in menu.isMenuOpen() }, restoreTimeout: timeout,
+            maxDisplacement: maxDisplacement)
     }
 
     /// Reveal at the first wait, return at the second.
-    private func clicked(timeout: TimeInterval = 10) -> ClickProxy {
-        bar.onWait = { [bar] count in
-            let x: Double? = [1: 22, 2: 110][count]
-            x.map { bar.frames[moveID("a")] = ItemFrame(x: $0, y: 0, width: 10, height: 20) }
-        }
-        let proxy = proxy(timeout: timeout)
+    private func clicked(timeout: TimeInterval = 10, maxDisplacement: TimeInterval = 120) -> ClickProxy {
+        script(revealAt: 1)
+        let proxy = proxy(timeout: timeout, maxDisplacement: maxDisplacement)
         #expect(proxy.click(moveID("a"), among: all) == .clicked)
         return proxy
+    }
+
+    /// Reveal at wait `count`, return at the next one.
+    private func script(revealAt count: Int) {
+        bar.onWait = { [bar] waits in
+            let x: Double? = [count: 22, count + 1: 110][waits]
+            x.map { bar.frames[moveID("a")] = ItemFrame(x: $0, y: 0, width: 10, height: 20) }
+        }
     }
 
     @Test func anOpenMenuAtTheTimeoutKeepsTheIconAwayAndStartsTheTimeoutOver() {
@@ -82,6 +88,73 @@ import Testing
         #expect(menu.reads == 1)
         timer.advance(by: 1)
         #expect(menu.reads == 2)
+        #expect(!proxy.hasDisplacedItem)
+    }
+
+    @Test func aMenuThatNeverClosesCannotKeepTheIconAwayPastTheMaximum() {
+        menu.isOpen = true
+        let proxy = clicked()
+
+        timer.advance(by: 119)
+        #expect(proxy.hasDisplacedItem)
+        #expect(menu.reads == 11)
+
+        timer.advance(by: 1)
+        #expect(!proxy.hasDisplacedItem)
+        #expect(menu.reads == 11)
+        #expect(timer.pending.isEmpty)
+    }
+
+    @Test func aTimeoutThatWouldPassTheMaximumIsNotWaitedForAgain() {
+        menu.isOpen = true
+        let proxy = clicked(timeout: 50)
+
+        timer.advance(by: 99)
+        #expect(proxy.hasDisplacedItem)
+        timer.advance(by: 1)
+
+        #expect(!proxy.hasDisplacedItem)
+        #expect(menu.reads == 1)
+        #expect(timer.pending.isEmpty)
+    }
+
+    @Test func aTimeoutThatEndsExactlyOnTheMaximumIsTheLastOne() {
+        menu.isOpen = true
+        let proxy = clicked(timeout: 60)
+
+        timer.advance(by: 60)
+        #expect(proxy.hasDisplacedItem)
+        timer.advance(by: 60)
+
+        #expect(!proxy.hasDisplacedItem)
+        #expect(menu.reads == 1)
+    }
+
+    @Test func theMaximumHandsOverToTheTimeoutHandlerWithTheMenuStillOpen() {
+        menu.isOpen = true
+        let proxy = clicked(maxDisplacement: 30)
+        var calls = 0
+        proxy.onRestoreTimeout = { calls += 1 }
+
+        timer.advance(by: 29)
+        #expect(calls == 0)
+        timer.advance(by: 1)
+
+        #expect(calls == 1)
+        #expect(menu.reads == 2)
+    }
+
+    @Test func eachClickGetsTheWholeMaximumAgain() {
+        menu.isOpen = true
+        let proxy = clicked(maxDisplacement: 60)
+        timer.advance(by: 50)
+        #expect(proxy.menuDidClose() == .restored)
+
+        script(revealAt: 3)
+        #expect(proxy.click(moveID("a"), among: all) == .clicked)
+        timer.advance(by: 59)
+        #expect(proxy.hasDisplacedItem)
+        timer.advance(by: 1)
         #expect(!proxy.hasDisplacedItem)
     }
 

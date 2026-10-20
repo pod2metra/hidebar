@@ -33,7 +33,9 @@ public enum RestoreOutcome: Equatable, Sendable {
 /// A clicked icon also returns by itself when `menuDidClose()` is not called within
 /// `restoreTimeout`: the closing of a foreign menu is not observable, so it cannot be the only
 /// trigger. Dragging the icon away while its menu is open would close the menu, so while
-/// `isMenuOpen` says one is, the timeout starts over instead.
+/// `isMenuOpen` says one is, the timeout starts over instead, but never past `maxDisplacement` in
+/// total: a probe that keeps reporting a menu (a foreign window stuck on the menu layer) must not
+/// keep the icon away for good.
 @MainActor
 public final class ClickProxy {
     private struct Displaced {
@@ -52,6 +54,9 @@ public final class ClickProxy {
     private let inputGate: InputGate
     private let isMenuOpen: @MainActor () -> Bool
     private let restoreTimeout: TimeInterval
+    private let maxDisplacement: TimeInterval
+    /// How long the clicked icon has been away: the timeouts armed since the click.
+    private var displacedFor: TimeInterval = 0
     private var displaced: Displaced?
     private var restoreTimer: (any Cancellable)?
 
@@ -66,12 +71,13 @@ public final class ClickProxy {
     /// the executor holds: user input stays suppressed from the reveal to the end of the click.
     /// It has no default, so a composition cannot leave rule 4 switched off by forgetting it.
     /// `isMenuOpen` tells whether any menu is open on screen; it has no default either, so the
-    /// timeout cannot silently go back to closing a menu under the user.
+    /// timeout cannot silently go back to closing a menu under the user. After `maxDisplacement`
+    /// seconds in all, the icon is restored whatever the probe says.
     public init(
         executor: MoveExecutor, poster: any EventPosting, locator: any ItemLocating,
         separator: MenuBarItemID, revealSide: DropSide, clock: any SchedulingClock,
         inputGate: InputGate, isMenuOpen: @escaping @MainActor () -> Bool,
-        restoreTimeout: TimeInterval = 10
+        restoreTimeout: TimeInterval = 10, maxDisplacement: TimeInterval = 120
     ) {
         self.executor = executor
         self.poster = poster
@@ -82,6 +88,7 @@ public final class ClickProxy {
         self.inputGate = inputGate
         self.isMenuOpen = isMenuOpen
         self.restoreTimeout = restoreTimeout
+        self.maxDisplacement = maxDisplacement
     }
 
     public func click(_ id: MenuBarItemID, among items: [DiscoveredItem]) -> ClickOutcome {
@@ -106,6 +113,7 @@ public final class ClickProxy {
             returnHome()
             return .clickFailed
         }
+        displacedFor = 0
         armRestoreTimer()
         return .clicked
     }
@@ -127,11 +135,14 @@ public final class ClickProxy {
     }
 
     private func armRestoreTimer() {
+        displacedFor += restoreTimeout
         restoreTimer = clock.schedule(after: restoreTimeout) { [weak self] in self?.restoreTimedOut() }
     }
 
+    /// The probe is not asked once another timeout would pass `maxDisplacement`.
     private func restoreTimedOut() {
-        guard !isMenuOpen() else {
+        let mayWaitLonger = displacedFor + restoreTimeout <= maxDisplacement
+        guard !mayWaitLonger || !isMenuOpen() else {
             armRestoreTimer()
             return
         }

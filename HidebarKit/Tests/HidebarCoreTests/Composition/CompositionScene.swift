@@ -13,6 +13,9 @@ final class CompositionScene {
     let menu = FakeMenuProbe()
     let backing = InMemoryStore()
     let separator: SeparatorController
+    /// What the off-main discovery returns, and its reads held until a test lets them finish.
+    let backgroundFound = [discovered("bg", x: 100, windowID: 9)]
+    let background: BackgroundReads
 
     /// What the fake discovery returns.
     var found: [DiscoveredItem] = []
@@ -36,10 +39,16 @@ final class CompositionScene {
         discover: { [unowned self] in
             lengthAtDiscovery.append(item.length)
             return found
-        })
+        },
+        discoverInBackground: readInBackground)
+
+    private var readInBackground: @Sendable () async -> [DiscoveredItem] {
+        { [background] in await background.read() }
+    }
 
     init() {
         separator = SeparatorController(item: item, clock: timer)
+        background = BackgroundReads(returning: backgroundFound)
         bar.frames[OwnItems.separatorID] = ItemFrame(x: 0, y: 0, width: 20, height: 20)
         for (index, name) in ["a", "b", "c"].enumerated() {
             bar.frames[moveID(name)] = ItemFrame(x: 100 + Double(index) * 20, y: 0, width: 10, height: 20)

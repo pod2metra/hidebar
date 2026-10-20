@@ -65,7 +65,7 @@ final class OverflowStripWindow: NSObject {
             screenWidth: frame.width, notchRightArea: notch, menusWidth: menusEdge, spacing: 0)
         await viewModel.recompute(
             screen: calculator, viewportWidth: frame.width - calculator.leftLimit,
-            items: services.discovery.discover(),
+            items: services.discovery.discover(on: services.background),
             capabilities: services.permissions.current().capabilities)
         place(on: screen, from: calculator.leftLimit)
         drawRows()

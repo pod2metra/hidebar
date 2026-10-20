@@ -42,7 +42,7 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 3.1 | Open Settings | Every third-party icon is listed with its app name | |
 | 3.2 | Which AX attribute names an item (`AXTitle`, then `AXDescription`) | Names are stable across relaunches; record apps with empty names | |
 | 3.3 | Hide icons with the separator, then open Settings | Hidden icons are still listed (their windows may report `onscreen=false`) | |
-| 3.4 | A frozen or busy app with a menu bar icon | Discovery does not hang the app (AX messaging timeout is 0.3 s per app); user input is never suppressed for more than 10 seconds in total, even if a move hangs | |
+| 3.4 | A frozen or busy app with a menu bar icon | Discovery does not hang the app (AX messaging timeout is 0.3 s per app); user input is never suppressed for more than 10 seconds in total, even if a move hangs. Opening a group panel and switching apps (which refreshes the overflow strip) do not freeze the menu bar while the frozen app is read; clicking the toggle during a panel's read is ignored | |
 | 3.5 | Hide, then immediately open a group panel or Settings | Positions are read after the bar has re-laid out: the reveal waits until the separator's frame is the same in two reads 25 ms apart, for about 1 second (one extra frame read). Record the usual wait and any case where an icon was read at a stale position | |
 
 ## 4. Moving and settings (needs Accessibility)
@@ -66,7 +66,7 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 | 5.2 | Move icons into the group, Apply, click the group icon | A panel drops down with snapshots of the group's icons | |
 | 5.3 | Click an icon in the panel | Its own menu opens; after the menu closes the icon goes back into hiding | |
 | 5.4 | Click an icon whose click opens no menu | The icon is restored within about 10 seconds | |
-| 5.4a | Keep an icon's menu open longer than 10 seconds | The icon stays where it is while any menu is open (an open menu window is detected on the pop-up menu layer); about 10 seconds after the menu closes it goes back, and the menu is never closed under you | |
+| 5.4a | Keep an icon's menu open longer than 10 seconds | The icon stays where it is while any menu is open (an open menu window is detected on the pop-up menu layer); about 10 seconds after the menu closes it goes back, and the menu is never closed under you. A menu kept open (or a foreign window stuck on the menu layer) postpones the return for at most 120 seconds in all; after that the icon goes back regardless | |
 | 5.5 | Delete a group | Its icons move to hidden; none disappear | |
 | 5.6 | Change a group's symbol | The status item updates | |
 

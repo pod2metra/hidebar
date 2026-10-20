@@ -29,12 +29,19 @@ public final class AppComposition {
     private let locator: any ItemLocating
     private let uptime: Uptime
     private let discover: @MainActor () -> [DiscoveredItem]
+    private let discoverInBackground: @Sendable () async -> [DiscoveredItem]
+    /// Reads in `discoverRevealedInBackground` that have not finished.
+    private var backgroundReads = 0
+    /// Whether the separator was hiding when the first of those reads began.
+    private var revealedForBackgroundReads = false
 
-    /// `locator` reads the separator's frame to tell when the bar has settled.
+    /// `locator` reads the separator's frame to tell when the bar has settled. `discover` reads
+    /// the bar on the main thread, where moves run; `discoverInBackground` reads it anywhere else.
     public init(
         separator: SeparatorController, clickProxy: ClickProxy, clock: any MoveClock,
         locator: any ItemLocating, uptime: @escaping Uptime = systemUptimeMilliseconds,
-        discover: @escaping @MainActor () -> [DiscoveredItem]
+        discover: @escaping @MainActor () -> [DiscoveredItem],
+        discoverInBackground: @escaping @Sendable () async -> [DiscoveredItem]
     ) {
         self.separator = separator
         self.clickProxy = clickProxy
@@ -42,6 +49,7 @@ public final class AppComposition {
         self.locator = locator
         self.uptime = uptime
         self.discover = discover
+        self.discoverInBackground = discoverInBackground
         // The proxy's own timeout restore would drag towards an off-screen anchor.
         clickProxy.onRestoreTimeout = { [weak self] in self?.restoreIfDisplaced() }
     }
@@ -77,6 +85,31 @@ public final class AppComposition {
     /// Every item on the bar, hidden ones included, for a group panel to match its rows against.
     public func discoverRevealed() -> [DiscoveredItem] {
         withRevealed { discover() }
+    }
+
+    /// `discoverRevealed` with the read off the main thread. The bar stays revealed while it runs,
+    /// so reads that overlap share the reveal and the last one to finish hides the separator again.
+    public func discoverRevealedInBackground() async -> [DiscoveredItem] {
+        backgroundReads += 1
+        if separator.state == .hiding {
+            separator.show()
+            revealedForBackgroundReads = true
+            awaitSettledBar()
+        }
+        let items = await discoverInBackground()
+        backgroundReads -= 1
+        if backgroundReads == 0 && revealedForBackgroundReads {
+            revealedForBackgroundReads = false
+            separator.hide()
+        }
+        return items
+    }
+
+    /// Flips the separator and answers with its new state. Ignored while a background read has the
+    /// bar revealed: its end would undo the choice.
+    public func toggleSeparator() -> SeparatorState {
+        if backgroundReads == 0 { separator.toggle() }
+        return separator.state
     }
 
     /// The bar as `SettingsViewModel` plans moves on it.

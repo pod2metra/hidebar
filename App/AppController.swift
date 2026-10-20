@@ -68,8 +68,7 @@ final class AppController: NSObject {
 
     @objc private func toggleClicked(_ sender: NSStatusBarButton) {
         guard NSApp.currentEvent?.type == .rightMouseUp else {
-            services.separator.toggle()
-            services.toggleItem.setSymbol(services.separator.state.toggleSymbolName)
+            services.toggleItem.setSymbol(services.composition.toggleSeparator().toggleSymbolName)
             return
         }
         services.toggleItem.item.menu = makeMenu()
@@ -88,9 +87,11 @@ final class AppController: NSObject {
     private func groupClicked(_ id: UUID, _ button: NSStatusBarButton) {
         services.composition.restoreIfDisplaced()
         guard let group = layout.groups.first(where: { $0.id == id }) else { return }
-        let items = services.composition.discoverRevealed()
         let capabilities = services.permissions.current().capabilities
-        Task { await panel.show(group: group, below: button, items: items, capabilities: capabilities) }
+        Task {
+            let items = await services.composition.discoverRevealedInBackground()
+            await panel.show(group: group, below: button, items: items, capabilities: capabilities)
+        }
     }
 
     private func iconClicked(_ id: MenuBarItemID) {
