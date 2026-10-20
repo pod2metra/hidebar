@@ -36,7 +36,21 @@ Xcode also disables the hardened runtime for the build.
 
 macOS ties Accessibility and Screen Recording grants to the app's code signature.
 An ad-hoc signature changes on every build, so the grants can be reset after each
-rebuild. For stable permissions while developing:
+rebuild. Two builds at different paths (for example `build/dd` and Xcode's
+DerivedData) also count as different apps.
+
+The simplest fix needs no Apple account: a local self-signed signing certificate.
+
+```bash
+bash scripts/dev_cert.sh   # once: creates "Hidebar Local Signing" in the login keychain
+make run                   # every time: builds at build/dd, signs, quits the old copy, launches
+```
+
+Grant the permissions once after the first `make run`; later rebuilds keep them. Launch
+the app only through `make run`, not with Xcode's Run button, which still signs ad-hoc
+into DerivedData. If a grant was given to an older build, reset it (below) and grant again.
+
+Alternatively, sign with an Apple development certificate:
 
 1. Open `Hidebar.xcodeproj` in Xcode and select the `Hidebar` target.
 2. Open *Signing & Capabilities* and choose your team under *Team*
