@@ -3,6 +3,7 @@
 enum MoveEvent: Equatable {
     case down(CursorPoint)
     case up(CursorPoint)
+    case click(CursorPoint)
     case setCursor(CursorPoint)
     case wait(Int)
 }
@@ -19,7 +20,10 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     private(set) var waits = 0
     /// Called after every wait with the 1-based wait count since creation.
     var onWait: (Int) -> Void = { _ in }
+    /// What `postClick` reports; false simulates an event that could not be posted.
+    var clickPosts = true
 
+    var clicks: [CursorPoint] { log.compactMap { if case .click(let point) = $0 { point } else { nil } } }
     var downs: [CursorPoint] { log.compactMap { if case .down(let point) = $0 { point } else { nil } } }
     var ups: [CursorPoint] { log.compactMap { if case .up(let point) = $0 { point } else { nil } } }
     var restores: [CursorPoint] {
@@ -44,6 +48,12 @@ final class MoveFakeBar: EventPosting, ItemLocating, MoveClock {
     func postCommandMouseUp(at point: CursorPoint) {
         cursor = point
         log.append(.up(point))
+    }
+
+    func postClick(at point: CursorPoint) -> Bool {
+        cursor = point
+        log.append(.click(point))
+        return clickPosts
     }
 
     func frame(of id: MenuBarItemID) -> ItemFrame? {

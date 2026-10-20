@@ -18,6 +18,8 @@ public protocol EventPosting {
     func postCommandMouseDown(at point: CursorPoint)
     /// Left mouse button up with the Command flag set.
     func postCommandMouseUp(at point: CursorPoint)
+    /// A plain left click (down and up, no modifiers). False when the event could not be created or posted.
+    func postClick(at point: CursorPoint) -> Bool
 }
 
 /// Live position of an item, read right before and after a drag (Accessibility or window bounds).

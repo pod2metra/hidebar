@@ -23,6 +23,7 @@ private final class GateProbe: EventPosting, ItemLocating, MoveClock {
     func setCursorPosition(_ point: CursorPoint) { sample() }
     func postCommandMouseDown(at point: CursorPoint) { sample() }
     func postCommandMouseUp(at point: CursorPoint) { sample() }
+    func postClick(at point: CursorPoint) -> Bool { sample(); return true }
     func frame(of id: MenuBarItemID) -> ItemFrame? { sample(); return frames[id] }
 
     func wait(milliseconds: Int) {
