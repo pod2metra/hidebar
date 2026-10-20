@@ -105,10 +105,10 @@ public final class AppComposition {
         return items
     }
 
-    /// Flips the separator and answers with its new state. Ignored while a background read has the
-    /// bar revealed: its end would undo the choice.
+    /// Flips the separator and answers with its new state. Ignored only while a background read has
+    /// revealed the bar itself, because the end of that read would undo the choice.
     public func toggleSeparator() -> SeparatorState {
-        if backgroundReads == 0 { separator.toggle() }
+        if !revealedForBackgroundReads { separator.toggle() }
         return separator.state
     }
 

@@ -87,6 +87,19 @@ import Testing
             ])
     }
 
+    @Test func aReadThatStartsShownAfterAnEarlierRevealDoesNotHideOnItsEnd() async {
+        scene.separator.hide()
+        let first = await startRead()
+        await scene.background.release(0)
+        _ = await first.value
+        #expect(composition.toggleSeparator() == .shown)
+
+        let second = await startRead()
+        await scene.background.release(1)
+        _ = await second.value
+        #expect(scene.separator.state == .shown)
+    }
+
     // MARK: toggling
 
     @Test func toggleFlipsTheSeparatorAndAnswersWithItsNewState() {
@@ -103,6 +116,16 @@ import Testing
 
         #expect(composition.toggleSeparator() == .shown)
         #expect(scene.item.lengthWrites == writes)
+
+        await scene.background.release(0)
+        _ = await read.value
+        #expect(scene.separator.state == .hiding)
+    }
+
+    @Test func toggleWorksDuringAReadThatDidNotReveal() async {
+        let read = await startRead()
+
+        #expect(composition.toggleSeparator() == .hiding)
 
         await scene.background.release(0)
         _ = await read.value

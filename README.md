@@ -105,7 +105,8 @@ by the checklist in `docs/MANUAL_TEST.md`.
   menu is open the return is postponed, up to 120 seconds in all.
 - A busy or frozen app slows icon discovery; Accessibility requests time out after 0.3
   seconds per app. Group panels and the overflow strip read the bar off the main thread, but
-  the first read at launch, Settings, and moves still run on it, so a frozen app can stall
+  the first read at launch, Settings, clicks through a panel, and moves still run on it, so a
+  frozen app can stall
   them for a moment.
 - Sequoia asks again for Screen Recording from time to time.
 - With ad-hoc signing macOS may forget the granted permissions after every rebuild.
