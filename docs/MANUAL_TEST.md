@@ -86,3 +86,4 @@ development team first (see `docs/XCODE_SETUP.md`), or re-grant after each build
 |---|---|---|---|
 | 7.1 | macOS 26 | All sections above | |
 | 7.2 | macOS 15 (minimum target) | Sections 1–5 | |
+| 7.3 | Two displays | Only the main display's menu bar items are listed and moved | |

@@ -37,16 +37,31 @@ public struct ItemDiscovery: Sendable {
         let isResolved: Bool
     }
 
+    /// Largest difference in points between a window's y and the display's top that still counts
+    /// as the top of its menu bar.
+    static var barTopTolerance: Double { 1 }
+
     private let windowList: any WindowListProvider
     private let ownerResolver: any ItemOwnerResolving
+    private let mainDisplay: @Sendable () -> ItemFrame
 
-    public init(windowList: any WindowListProvider, ownerResolver: any ItemOwnerResolving) {
+    /// `mainDisplay` is the bounds of the display the app works on, in the window server's global
+    /// coordinates; it is read on every `discover()` because displays come and go.
+    public init(
+        windowList: any WindowListProvider, ownerResolver: any ItemOwnerResolving,
+        mainDisplay: @escaping @Sendable () -> ItemFrame
+    ) {
         self.windowList = windowList
         self.ownerResolver = ownerResolver
+        self.mainDisplay = mainDisplay
     }
 
-    /// Visible, non-empty status item windows ordered by x. Offscreen twins, zero-size windows
-    /// and everything off layer 25 are dropped.
+    /// Visible, non-empty status item windows of the main display's menu bar, ordered by x.
+    /// Offscreen twins, zero-size windows and everything off layer 25 are dropped.
+    ///
+    /// Every item has a window on each display's bar (a second display's copies sit at that
+    /// display's own y), so only windows at the main display's top and not past its right edge
+    /// stay. The left edge is open on purpose: hidden items are pushed left of the display.
     ///
     /// An item is managed only when Accessibility named its owner. Without that answer the
     /// window's own owner and title are not an identity: on macOS 26 the owner is Control Center
@@ -55,8 +70,10 @@ public struct ItemDiscovery: Sendable {
     /// item is unmanaged (visible, never moved, never saved); its ID is only a display fallback.
     /// Resolved items that share one ID are all unmanaged too.
     public func discover() -> [DiscoveredItem] {
+        let display = mainDisplay()
         let candidates = windowList.windows()
             .filter(ItemDiscovery.isStatusItem)
+            .filter { ItemDiscovery.isOnBar(of: display, $0) }
             .sorted { ($0.frame.x, $0.windowID) < ($1.frame.x, $1.windowID) }
             .map(candidate)
         let shared = Set(
@@ -68,6 +85,11 @@ public struct ItemDiscovery: Sendable {
     private static func isStatusItem(_ window: WindowInfo) -> Bool {
         window.layer == statusItemLayer && window.isOnscreen
             && window.frame.width > 0 && window.frame.height > 0
+    }
+
+    private static func isOnBar(of display: ItemFrame, _ window: WindowInfo) -> Bool {
+        abs(window.frame.y - display.y) <= barTopTolerance
+            && window.frame.x < display.x + display.width
     }
 
     private func candidate(for window: WindowInfo) -> Candidate {

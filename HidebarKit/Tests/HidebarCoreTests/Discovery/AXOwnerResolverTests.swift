@@ -116,7 +116,9 @@ private final class MutableWindowList: WindowListProvider {
     @Test func discoveryTreatsAnAXResolvedItemAsManaged() {
         let list = MutableWindowList([window(5, x: 100)])
         let (resolver, _) = make(list, apps: oneItem)
-        let found = ItemDiscovery(windowList: list, ownerResolver: resolver).discover()
+        let found = ItemDiscovery(
+            windowList: list, ownerResolver: resolver, mainDisplay: { mainDisplay }
+        ).discover()
         #expect(found.map(\.isManaged) == [true])
         #expect(found.first?.item.id == MenuBarItemID(ownerBundleID: alpha.bundleID, title: alpha.title))
     }

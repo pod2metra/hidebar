@@ -41,7 +41,8 @@ final class AppServices {
         let windows = CGWindowListSource()
         let reader = AXMenuBarReader(tree: AXTreeReader(), bundleIDOfPID: RunningApps.bundleID)
         let discovery = ItemDiscovery(
-            windowList: windows, ownerResolver: AXOwnerResolver(windowList: windows, reader: reader))
+            windowList: windows, ownerResolver: AXOwnerResolver(windowList: windows, reader: reader),
+            mainDisplay: MainDisplay.bounds)
         let poster = CGEventPoster()
         let locator = AXFrameLocator(reader: reader)
         let moveClock = ThreadMoveClock()

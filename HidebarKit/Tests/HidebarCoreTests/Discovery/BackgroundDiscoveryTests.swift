@@ -41,7 +41,8 @@ final class InlineRunner: BackgroundRunning {
     private let windows = CountingWindowList([window(1, x: 200), window(2, x: 100)])
 
     private var discovery: ItemDiscovery {
-        ItemDiscovery(windowList: windows, ownerResolver: StubOwnerResolver())
+        ItemDiscovery(
+            windowList: windows, ownerResolver: StubOwnerResolver(), mainDisplay: { mainDisplay })
     }
 
     @Test func theWindowsAreReadInsideTheRunnerNotBeforeIt() async {

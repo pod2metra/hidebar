@@ -13,20 +13,26 @@ struct StubOwnerResolver: ItemOwnerResolving {
 
 let controlCenter = "com.apple.controlcenter"
 
+/// A main display wide enough for every row the tests use.
+let mainDisplay = ItemFrame(x: 0, y: 0, width: 3_000, height: 1_000)
+
 /// The row sample in Spikes/FINDINGS.md has no height; 24 is the menu bar height on that machine.
 func window(
-    _ id: Int, x: Double, width: Double = 46, height: Double = 24, layer: Int = 25,
+    _ id: Int, x: Double, y: Double = 0, width: Double = 46, height: Double = 24, layer: Int = 25,
     onscreen: Bool = true, owner: String? = controlCenter, title: String = ""
 ) -> WindowInfo {
     WindowInfo(
         windowID: id, layer: layer,
-        frame: ItemFrame(x: x, y: 0, width: width, height: height),
+        frame: ItemFrame(x: x, y: y, width: width, height: height),
         isOnscreen: onscreen, ownerBundleID: owner, title: title)
 }
 
-func discover(_ windows: [WindowInfo], owners: [Int: ItemOwner] = [:]) -> [DiscoveredItem] {
+func discover(
+    _ windows: [WindowInfo], owners: [Int: ItemOwner] = [:], display: ItemFrame = mainDisplay
+) -> [DiscoveredItem] {
     ItemDiscovery(
-        windowList: StubWindowList(list: windows), ownerResolver: StubOwnerResolver(owners: owners)
+        windowList: StubWindowList(list: windows), ownerResolver: StubOwnerResolver(owners: owners),
+        mainDisplay: { display }
     ).discover()
 }
 
