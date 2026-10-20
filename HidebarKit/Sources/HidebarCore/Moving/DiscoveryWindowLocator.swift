@@ -12,7 +12,9 @@ public protocol WindowLocating {
 /// discovery loses items it had a moment before. A window keeps its number for as long as it
 /// exists, so an item discovery loses is looked up in the window list by the number it had when it
 /// was last found, and only a window that is gone counts as missing. Every lookup remembers all
-/// the managed items it sees, so the numbers are known from the first drag of a plan on.
+/// the managed items it sees, so the numbers are known from the first drag of a plan on. If
+/// discovery sees several unmanaged items under one id, the id names no single window and the
+/// remembered number is not trusted.
 @MainActor
 public final class DiscoveryWindowLocator: WindowLocating {
     private let discover: @MainActor () -> [DiscoveredItem]
@@ -27,10 +29,13 @@ public final class DiscoveryWindowLocator: WindowLocating {
     }
 
     public func window(of id: MenuBarItemID) -> WindowTarget? {
+        let found = discover()
         let managed = Dictionary(
-            discover().filter(\.isManaged).map { ($0.item.id, $0) }, uniquingKeysWith: { first, _ in first })
+            found.filter(\.isManaged).map { ($0.item.id, $0) }, uniquingKeysWith: { first, _ in first })
         managed.forEach { known[$0.key] = $0.value.windowID }
-        return managed[id]?.window ?? remembered(id)
+        if let current = managed[id] { return current.window }
+        let sharing = Dictionary(grouping: found, by: \.item.id)[id]?.count ?? 0
+        return sharing > 1 ? nil : remembered(id)
     }
 
     private func remembered(_ id: MenuBarItemID) -> WindowTarget? {

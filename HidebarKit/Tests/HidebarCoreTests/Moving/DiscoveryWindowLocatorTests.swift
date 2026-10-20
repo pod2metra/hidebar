@@ -105,6 +105,26 @@ import Testing
         #expect(locator.window(of: moveID("a")) == nil)
     }
 
+    @Test func anIdSeenOnTwoItemsIsAmbiguousSoTheRememberedWindowIsNotUsed() {
+        let bar = Bar()
+        let locator = locator(bar)
+        bar.found = [managed(moveID("a"), windowID: 7)]
+        _ = locator.window(of: moveID("a"))
+        bar.found = [unmanaged(moveID("a"), windowID: 7), unmanaged(moveID("a"), windowID: 9)]
+        bar.windows = [window(7, x: 300)]
+        #expect(locator.window(of: moveID("a")) == nil)
+    }
+
+    @Test func aSingleUnmanagedItemWithTheIdStillGetsTheRememberedWindow() {
+        let bar = Bar()
+        let locator = locator(bar)
+        bar.found = [managed(moveID("a"), windowID: 7)]
+        _ = locator.window(of: moveID("a"))
+        bar.found = [unmanaged(moveID("a"), windowID: 7), unmanaged(moveID("b"), windowID: 9)]
+        bar.windows = [window(7, x: 300)]
+        #expect(locator.window(of: moveID("a"))?.windowID == 7)
+    }
+
     @Test func onlyTheRememberedNumberMatchesAmongSmallerAndLargerOnes() {
         let bar = Bar()
         let locator = locator(bar)
