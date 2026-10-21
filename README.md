@@ -15,11 +15,13 @@ Hide menu-bar icons behind one divider. Open source, for macOS.
 
 </div>
 
-<!-- Capture docs/media/collapsed.png and docs/media/expanded.png (the menu bar with the section collapsed and expanded) before publishing. -->
+**Expanded:** everything left of the pipe is visible.
 
-| Collapsed | Expanded |
-|---|---|
-| ![Menu bar with the section collapsed](docs/media/collapsed.png) | ![Menu bar with the section expanded](docs/media/expanded.png) |
+<img src="docs/media/expanded.png" alt="Menu bar with the section expanded" width="782">
+
+**Collapsed:** one click on the arrow hides it.
+
+<img src="docs/media/collapsed.png" alt="Menu bar with the section collapsed" width="782">
 
 ## Install
 

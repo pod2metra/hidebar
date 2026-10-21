@@ -8,9 +8,6 @@
   --accent: #4a52d0;
   --accent-fg: #fff;
   --accent-text: #4a52d0;
-  --wall: linear-gradient(120deg, #c7d5ff, #e3d2f8 48%, #ffdcc9);
-  --bar-bg: rgba(255, 255, 255, 0.55);
-  --glyph: #48484e;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -25,9 +22,6 @@
     --accent: #5a62e6;
     --accent-fg: #fff;
     --accent-text: #9aa1ff;
-    --wall: linear-gradient(120deg, #1f2b4d, #3b2a55 48%, #4b2d33);
-    --bar-bg: rgba(28, 28, 32, 0.6);
-    --glyph: #dcdce2;
   }
 }
 
@@ -48,7 +42,7 @@ h2 { font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: -0.02em; }
 h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
 p { margin: 0 0 1rem; }
 
-.sr-only, .sprite { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip {
   position: absolute;
   left: 12px;
@@ -120,28 +114,15 @@ button:hover { border-color: var(--accent); }
 :focus-visible { outline: 3px solid var(--accent-text); outline-offset: 2px; }
 
 .demo { display: grid; gap: 24px; }
-figure { margin: 0; }
+figure { margin: 0; min-width: 0; }
 figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
-.stage { height: 44px; background: var(--wall); }
-.bar {
-  display: flex;
-  align-items: center;
-  height: 28px;
-  padding: 0 12px;
-  overflow: hidden;
-  color: var(--glyph);
-  background: var(--bar-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
-  backdrop-filter: blur(24px) saturate(1.8);
-  font: 500 13px/1 var(--font);
-  white-space: nowrap;
+/* Narrow screens crop the bar from the left so the arrow and the clock stay visible. */
+.shot { display: flex; justify-content: flex-end; max-width: 784px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
+.shot img { flex: none; display: block; width: 782px; max-width: none; height: 30px; }
+/* Phones: shrink the bar so the pipe and a few icons left of it stay in view. */
+@media (max-width: 599px) {
+  .shot img { width: 520px; height: 20px; }
 }
-.app-menu, .tray { display: flex; align-items: center; gap: 12px; }
-.app-menu b { font-weight: 600; }
-.tray { margin-left: auto; gap: 10px; }
-.g { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.pipe { flex: none; width: 1px; height: 14px; margin: 0 -2px; background: currentColor; opacity: 0.35; }
-.tray time { margin-left: 2px; font-variant-numeric: tabular-nums; }
 
 .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .cards li { background: var(--bg-alt); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
@@ -187,12 +168,6 @@ footer { margin-top: 88px; border-top: 1px solid var(--line); padding: 16px 0 40
   tbody th { white-space: normal; padding-top: 12px; font-size: 1.05rem; }
   tbody td:last-child { padding-bottom: 12px; }
   td::before { content: attr(data-label); display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-}
-@media (max-width: 479px) {
-  .bar { padding: 0 10px; }
-  .app-menu { gap: 10px; }
-  .app-menu span:nth-child(n+3), .opt, .date { display: none; }
-  .tray { gap: 8px; }
 }
 @media (min-width: 960px) {
   .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
