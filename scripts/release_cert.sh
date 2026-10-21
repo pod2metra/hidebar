@@ -45,6 +45,10 @@ if printf '%s\n' "$existing" | grep -qxE 'SIGNING_P12|SIGNING_P12_PASSWORD'; the
 fi
 
 if [ -z "${RELEASE_P12_PASSWORD:-}" ]; then
+    if [ ! -t 0 ]; then
+        echo "release_cert: no terminal to ask for the password; run it in Terminal or set RELEASE_P12_PASSWORD" >&2
+        exit 1
+    fi
     read -rs -p "Password for the .p12: " RELEASE_P12_PASSWORD
     echo
     read -rs -p "Repeat the password: " again
