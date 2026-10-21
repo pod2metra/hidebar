@@ -38,7 +38,7 @@ The release workflow reads them only through step-level `env:`; nothing is print
 
 #### `SIGNING_P12`, `SIGNING_P12_PASSWORD`
 
-Generate the certificate once, on your Mac:
+Generate the certificate once, on your Mac, with `gh` logged in:
 
 ```bash
 bash scripts/release_cert.sh ~/hidebar-release.p12
@@ -46,14 +46,11 @@ bash scripts/release_cert.sh ~/hidebar-release.p12
 
 The script asks for a password (or reads `RELEASE_P12_PASSWORD`), creates a self-signed
 "Hidebar Release Signing" code-signing certificate valid for 10 years, writes it with its private
-key to the `.p12`, and prints the certificate SHA-1 and the two commands that store the secrets:
+key to the `.p12`, prints the certificate SHA-1, and stores both secrets with `gh secret set`
+(the password goes to `gh` on stdin, not on the command line).
 
-```bash
-base64 -i ~/hidebar-release.p12 | gh secret set SIGNING_P12 --repo pod2metra/hidebar
-gh secret set SIGNING_P12_PASSWORD --repo pod2metra/hidebar
-```
-
-It refuses to overwrite an existing file and touches neither the repository nor your keychain.
+It refuses to overwrite an existing file, refuses to run when the repository already has either
+secret, and does not touch your keychain or the working tree.
 
 **Back up the `.p12` and its password** (a password manager, an encrypted drive), outside the
 repository. If it is lost, the next certificate is a different one: every release after that has
