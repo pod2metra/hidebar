@@ -2,17 +2,17 @@
 # Packaging: builds Hidebar in Release and wraps it in a DMG.
 #
 #   bash scripts/package.sh              ad-hoc build for this machine: build/Hidebar.dmg
-#   bash scripts/package.sh release-app  Developer ID build of Hidebar.app only
+#   bash scripts/package.sh release-app  build of Hidebar.app signed with the release certificate
 #   bash scripts/package.sh release-dmg  build/Hidebar-$VERSION.dmg from that app
 #
 # The default build is signed ad hoc, which is enough to run it on the machine that built it.
-# A copy downloaded from the internet needs the two release phases with notarization between
-# them: scripts/notarize.sh on the app (so the app carries its own stapled ticket), then
-# release-dmg, then scripts/notarize.sh on the DMG. .github/workflows/release.yml runs that.
+# The release phases sign with the persistent self-signed certificate from scripts/release_cert.sh,
+# with the hardened runtime but no notarization: every version then has the same designated requirement,
+# so the Accessibility grant survives updates. .github/workflows/release.yml runs both phases.
 #
 # The release phases are driven by the environment:
-#   SIGN_IDENTITY  codesign identity (name or SHA-1 hash) of a "Developer ID Application"
-#                  certificate that is reachable from the keychain search list
+#   SIGN_IDENTITY  codesign identity (name or SHA-1 hash) of that certificate, reachable from
+#                  the keychain search list; a self-signed one is not "valid", so pass the hash
 #   VERSION        marketing version, MAJOR.MINOR.PATCH
 #   BUILD_NUMBER   build number (CFBundleVersion), digits only; release-app only
 set -euo pipefail
@@ -67,8 +67,9 @@ if [ ! -d "$app" ]; then
 fi
 
 if [ "$mode" = release-app ]; then
-    # Re-sign the ad-hoc build: hardened runtime and a secure timestamp are what notarization asks for.
-    codesign --force --options runtime --timestamp \
+    # Re-sign the ad-hoc build. The hardened runtime stays on (--force would drop it otherwise):
+    # it makes the app ignore DYLD_INSERT_LIBRARIES, which would inherit its Accessibility grant.
+    codesign --force --options runtime --timestamp=none \
         --entitlements "$root/App/Hidebar.entitlements" \
         --sign "$SIGN_IDENTITY" "$app" >&2
     details="$(codesign -dv "$app" 2>&1)"
@@ -89,11 +90,6 @@ if [ "$mode" = release-app ]; then
     exit 0
 fi
 
-if [ "$mode" = release-dmg ] && ! xcrun stapler validate "$app" >&2; then
-    echo "package: $app has no stapled notarization ticket; run scripts/notarize.sh on it first" >&2
-    exit 1
-fi
-
 rm -rf "$stage" "$dmg"
 mkdir -p "$stage"
 cp -R "$app" "$stage/Hidebar.app"
@@ -102,7 +98,7 @@ hdiutil create -volname Hidebar -srcfolder "$stage" -ov -format UDZO "$dmg" >&2
 rm -rf "$stage"
 
 if [ "$mode" = release-dmg ]; then
-    codesign --force --timestamp --sign "$SIGN_IDENTITY" "$dmg" >&2
+    codesign --force --timestamp=none --sign "$SIGN_IDENTITY" "$dmg" >&2
     codesign --verify --strict "$dmg"
 fi
 
@@ -112,7 +108,6 @@ if [ "$mode" = adhoc ]; then
 
 NOTE: this build is signed ad hoc. macOS Gatekeeper will refuse it on other machines, and
 its Accessibility grant does not survive an update. To distribute it,
-use the release-app and release-dmg phases with a Developer ID identity and notarize both
-artifacts; see docs/RELEASING.md.
+use the release-app and release-dmg phases with the release certificate; see docs/RELEASING.md.
 NOTE
 fi

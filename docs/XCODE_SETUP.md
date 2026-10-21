@@ -31,8 +31,9 @@ xcodebuild -project Hidebar.xcodeproj -scheme Hidebar -configuration Debug build
 ## Signing and stable permissions (TCC)
 
 The project signs with `CODE_SIGN_IDENTITY = "-"` (ad-hoc) and no development team,
-so it builds and runs on any machine without an Apple account. With ad-hoc signing
-Xcode also disables the hardened runtime for the build.
+so it builds and runs on any machine without an Apple account. A Debug build signed
+this way has no hardened runtime (`codesign -dv` shows `flags=0x2(adhoc)`); a Release
+build keeps it (`flags=0x10002(adhoc,runtime)`), and so does the release re-signing.
 
 macOS ties the Accessibility grant to the app's code signature.
 An ad-hoc signature changes on every build, so the grant can be reset after each
@@ -69,5 +70,6 @@ If the grant gets stuck, reset it and grant it again on the next launch:
 tccutil reset Accessibility app.hidebar.Hidebar
 ```
 
-Release builds use Developer ID signing, the hardened runtime and notarization;
-that is configured at release time, not in this project's defaults.
+Release builds are re-signed at release time with the self-signed release certificate from
+`scripts/release_cert.sh`, with the hardened runtime but without notarization; that is not
+configured in this project's defaults. See `docs/RELEASING.md`.

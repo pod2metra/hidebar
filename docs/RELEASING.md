@@ -2,9 +2,15 @@
 
 A release is a git tag. Running the *Release* workflow with a version bump creates the tag, and
 pushing `vMAJOR.MINOR.PATCH` by hand also runs `.github/workflows/release.yml`,
-which builds the app, signs it with a Developer ID certificate, notarizes and staples the
-app and then the DMG, publishes the DMG as a GitHub Release, and updates the Homebrew cask in the tap repository.
+which builds the app, signs it with the project's self-signed release certificate, publishes the
+DMG as a GitHub Release, and updates the Homebrew cask in the tap repository.
 The site in `site/` is deployed separately by `.github/workflows/pages.yml`.
+
+There is no Apple Developer Program membership behind this: the app is not notarized (it does use
+the hardened runtime). The first launch therefore needs one manual step from the user
+(*System Settings -> Privacy & Security -> Open Anyway*). Signing every version with the same
+certificate keeps the designated requirement identical, so macOS keeps the Accessibility grant
+across updates.
 
 ## One-time setup
 
@@ -26,43 +32,34 @@ The release workflow reads them only through step-level `env:`; nothing is print
 
 | Secret | What it is |
 |---|---|
-| `DEVELOPER_ID_P12` | Base64 of the exported Developer ID Application certificate with its private key |
-| `DEVELOPER_ID_P12_PASSWORD` | The password chosen when exporting that `.p12` |
-| `APPLE_TEAM_ID` | The 10-character Team ID of the Apple Developer account |
-| `NOTARY_KEY_ID` | Key ID of the App Store Connect API key |
-| `NOTARY_ISSUER_ID` | Issuer ID shown on the App Store Connect keys page |
-| `NOTARY_KEY_P8` | The full text of the downloaded `AuthKey_<KEY_ID>.p8` file |
+| `SIGNING_P12` | Base64 of the password-protected `.p12` with the release certificate and its private key |
+| `SIGNING_P12_PASSWORD` | The password of that `.p12` |
 | `TAP_TOKEN` | Fine-grained personal access token that can push to the tap |
 
-#### `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`
+#### `SIGNING_P12`, `SIGNING_P12_PASSWORD`
 
-1. In the Apple Developer portal create a *Developer ID Application* certificate and
-   install it into the login keychain (Keychain Access -> Certificate Assistant ->
-   Request a Certificate from a Certificate Authority, then upload the request).
-2. In Keychain Access, *My Certificates*, select the *Developer ID Application: ...*
-   certificate (the one with the private key under it) and choose *File -> Export Items...*
-   with the `.p12` format. Set a strong password; that is `DEVELOPER_ID_P12_PASSWORD`.
-3. Encode and copy it, then delete the file:
+Generate the certificate once, on your Mac:
 
-   ```bash
-   base64 -i DeveloperID.p12 | pbcopy
-   rm DeveloperID.p12
-   ```
+```bash
+bash scripts/release_cert.sh ~/hidebar-release.p12
+```
 
-   Paste the clipboard as `DEVELOPER_ID_P12`.
+The script asks for a password (or reads `RELEASE_P12_PASSWORD`), creates a self-signed
+"Hidebar Release Signing" code-signing certificate valid for 10 years, writes it with its private
+key to the `.p12`, and prints the certificate SHA-1 and the two commands that store the secrets:
 
-#### `APPLE_TEAM_ID`
+```bash
+base64 -i ~/hidebar-release.p12 | gh secret set SIGNING_P12 --repo pod2metra/hidebar
+gh secret set SIGNING_P12_PASSWORD --repo pod2metra/hidebar
+```
 
-Apple Developer portal -> *Membership details* -> *Team ID*. The workflow only accepts a
-signing identity that belongs to this team.
+It refuses to overwrite an existing file and touches neither the repository nor your keychain.
 
-#### `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_KEY_P8`
-
-1. App Store Connect -> *Users and Access -> Integrations -> App Store Connect API* ->
-   *Team Keys* -> add a key with the *Developer* role.
-2. The key ID is in the keys table; the issuer ID is shown above it.
-3. Download `AuthKey_<KEY_ID>.p8` (Apple lets you download it once). Paste its whole
-   content, including the `BEGIN`/`END` lines, as `NOTARY_KEY_P8`.
+**Back up the `.p12` and its password** (a password manager, an encrypted drive), outside the
+repository. If it is lost, the next certificate is a different one: every release after that has
+a different signature, and every user has to grant Accessibility again. The same happens if
+you run the script a second time and replace the secrets. The certificate expires after 10 years;
+replacing it then is the same one-time break.
 
 #### `TAP_TOKEN`
 
@@ -101,14 +98,16 @@ The version comes only from the tag; `project.pbxproj` is never edited.
    - builds with `MARKETING_VERSION=0.2.0` and `CURRENT_PROJECT_VERSION=<run number>`, and
      with `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` so the app icon from
      `App/Assets.xcassets` is included even while the project file does not set it;
-   - signs the app (hardened runtime, secure timestamp), notarizes it (zipped with `ditto`),
-     staples the ticket to `Hidebar.app` and checks it with `spctl -t exec`; the app then
-     launches offline without a Gatekeeper lookup;
-   - builds the DMG from the stapled app, signs it, notarizes and staples it, and checks it
-     with `spctl -t open --context context:primary-signature`;
+   - imports the `.p12` into a temporary keychain and picks the signing identity by the SHA-1 of
+     the certificate inside it (a self-signed certificate is untrusted, so `find-identity -v`
+     would not list it);
+   - re-signs the app with that identity, with the hardened runtime (the script fails if the flag
+     is missing) and without a timestamp (`scripts/package.sh release-app`);
+   - builds the DMG from the app and signs it (`release-dmg`), then records its SHA-256;
    - creates the GitHub Release `v0.2.0` with `Hidebar-0.2.0.dmg` and notes made from
      the commit subjects since the previous `v*` tag (`scripts/release_notes.sh`);
-   - writes `Casks/hidebar.rb` (version and SHA-256) to the tap and pushes it.
+   - writes `Casks/hidebar.rb` (version and SHA-256) to the tap and pushes it;
+   - deletes the temporary keychain and the `.p12`.
 
 To re-run for an existing tag, use *Actions -> Release -> Run workflow*, leave `bump` as
 `none` and enter the tag. Give exactly one of `bump` and `tag`; the run fails otherwise.
@@ -121,29 +120,39 @@ Users then install with:
 brew install --cask pod2metra/tap/hidebar
 ```
 
+or download the DMG from the Release. Either way, the first launch is blocked by Gatekeeper:
+they open *System Settings -> Privacy & Security*, scroll down and press *Open Anyway* next to
+Hidebar. The cask prints this as a caveat.
+
 ## Trying the release build locally
 
-```bash
-SIGN_IDENTITY="Developer ID Application: <NAME> (<TEAM_ID>)" \
-VERSION=0.2.0 BUILD_NUMBER=1 bash scripts/package.sh release-app
-```
-
-This signs `build/dd/Build/Products/Release/Hidebar.app`. To go on, export
-`NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` and `NOTARY_KEY_P8` (the key file's text) and run, in order:
+Import the `.p12` into a throwaway keychain (never your login keychain), put that keychain first
+in the search list, and pass the certificate hash as the identity:
 
 ```bash
-bash scripts/notarize.sh build/dd/Build/Products/Release/Hidebar.app
-SIGN_IDENTITY=... VERSION=0.2.0 bash scripts/package.sh release-dmg
-bash scripts/notarize.sh build/Hidebar-0.2.0.dmg
+read -rs -p "p12 password: " P12_PASSWORD; echo   # keeps the password out of the shell history
+security create-keychain -p tmp /tmp/hidebar-test.keychain-db
+security unlock-keychain -p tmp /tmp/hidebar-test.keychain-db
+security import ~/hidebar-release.p12 -k /tmp/hidebar-test.keychain-db -P "$P12_PASSWORD" -T /usr/bin/codesign
+unset P12_PASSWORD
+security set-key-partition-list -S apple-tool:,apple: -s -k tmp /tmp/hidebar-test.keychain-db
+security list-keychains -d user -s /tmp/hidebar-test.keychain-db "$HOME/Library/Keychains/login.keychain-db"
+
+SIGN_IDENTITY=<certificate SHA-1> VERSION=0.2.0 BUILD_NUMBER=1 bash scripts/package.sh release-app
+SIGN_IDENTITY=<certificate SHA-1> VERSION=0.2.0 bash scripts/package.sh release-dmg
 ```
 
-`release-dmg` refuses an app without a stapled ticket. Without arguments,
-`bash scripts/package.sh` makes the ad-hoc `build/Hidebar.dmg` for local use.
+This signs `build/dd/Build/Products/Release/Hidebar.app` and writes `build/Hidebar-0.2.0.dmg`.
+`codesign -dvv` on either shows `Authority=Hidebar Release Signing`, and `codesign -dr -` prints a
+designated requirement that is identical across builds. Remove the test keychain afterwards with
+`security delete-keychain` and restore the keychain search list.
+Without arguments, `bash scripts/package.sh` makes the ad-hoc `build/Hidebar.dmg` for local use.
 
 ## Notes
 
-- The Accessibility grant is tied to the code signature. Because every
-  release is signed with the same Developer ID, users keep their grant across updates.
+- The Accessibility grant is tied to the code signature. Because every release is signed with the
+  same certificate, users keep their grant across updates. Hidebar's own debug builds use a different
+  certificate (`scripts/dev_cert.sh`).
 - The Release run builds the DMG with Xcode 27.0 and fails unless `xcodebuild -version`
   reports exactly `XCODE_VERSION` and `XCODE_BUILD` from `release.yml`. That is a version and
   build pin, not a beta detector: before raising it, confirm from the runner image notes that
@@ -155,3 +164,5 @@ bash scripts/notarize.sh build/Hidebar-0.2.0.dmg
   with that `tag` (not "Re-run all jobs": for a tag the bump created, the `tag` job would fail
   on "already tagged"): it rebuilds and replaces the DMG, then writes the new checksum to
   the cask. Until then `brew install` fails its checksum check.
+- Moving to a Developer ID certificate later means restoring notarization steps (they are in git
+  history) and changing the secrets; users then grant Accessibility once more.

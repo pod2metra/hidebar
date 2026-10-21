@@ -14,4 +14,16 @@ cask "hidebar" do
   uninstall quit: "app.hidebar.Hidebar"
 
   zap trash: "~/Library/Preferences/app.hidebar.Hidebar.plist"
+
+  caveats <<~EOS
+    Hidebar is not notarized by Apple (it is signed with a free, self-signed certificate).
+    The first time you open it macOS says it cannot verify the app. To allow it:
+
+      System Settings -> Privacy & Security -> scroll down -> "Open Anyway" next to Hidebar
+
+    macOS may ask for "Open Anyway" again after an update.
+
+    Hidebar also needs Accessibility access (Privacy & Security -> Accessibility). That permission
+    carries over to updates, because every release is signed with the same certificate.
+  EOS
 end
