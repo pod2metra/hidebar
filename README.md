@@ -35,6 +35,18 @@ Or download the DMG from the [latest release](https://github.com/pod2metra/hideb
 
 Hidebar needs macOS 15 (Sequoia) or later.
 
+### First launch
+
+Releases are signed with the project's own certificate and are not notarized by Apple, so macOS blocks the first launch ("Apple could not verify…"). You do this once:
+
+1. Try to open Hidebar, then close the warning.
+2. Open System Settings → Privacy & Security and scroll down to Security.
+3. Click **Open Anyway** next to Hidebar and confirm.
+
+Right-click → Open no longer bypasses this on macOS 15. The Accessibility permission carries over to updates, because every release is signed with the same certificate. macOS may ask you to choose Open Anyway again after an update. Homebrew installs show the same prompt.
+
+Notarization needs a paid Apple Developer membership, and Hidebar is a free hobby project. The code is open, so you can audit it or build it yourself (see [Build from source](#build-from-source)).
+
 ## How to use
 
 Hidebar puts one divider in the menu bar: a pipe (`|`) and an arrow to the right of it.

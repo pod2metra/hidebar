@@ -84,6 +84,16 @@ make run</code></pre>
         <p>Needs Xcode 27 (Swift 6.4).</p>
       </div>
     </div>
+    <div class="step first-launch">
+      <h3>First launch</h3>
+      <p>Hidebar is not notarized by Apple, so macOS blocks it the first time. You do this once, with either install:</p>
+      <ol>
+        <li>Try to open Hidebar, then close the warning.</li>
+        <li>Open System Settings &rarr; Privacy &amp; Security and scroll down to Security.</li>
+        <li>Click <strong>Open Anyway</strong> next to Hidebar and confirm.</li>
+      </ol>
+      <p>Right-click &rarr; Open no longer works around this on macOS 15. The Accessibility permission carries over to updates, because every release is signed with the same certificate. macOS may ask you to choose Open Anyway again after an update.</p>
+    </div>
   </section>
 
   <section class="wrap" aria-labelledby="usage">
@@ -116,6 +126,7 @@ make run</code></pre>
     <details><summary>What about the notch?</summary><p>Icons that end up behind the notch or under a long app menu aren't hidden, they're just unreachable. Hidebar puts a dot on the arrow when that happens and shows them in a strip below the menu bar so you can still click them.</p></details>
     <details><summary>Why does it need Accessibility?</summary><p>macOS offers no public way to learn which app owns an icon, or to click it for you. Accessibility is how Hidebar reads icon positions and clicks icons in the strip. Hiding with the divider works without it.</p></details>
     <details><summary>Does it phone home?</summary><p>No. Hidebar has no telemetry and makes no network connections. The code is public, so you can check.</p></details>
+    <details><summary>Why does macOS warn me the first time?</summary><p>Hidebar is signed with its own certificate but is not notarized by Apple. Notarization needs a paid Apple Developer membership, and Hidebar is a free hobby project, so macOS can't verify it and blocks the first launch. Allow it under System Settings &rarr; Privacy &amp; Security &rarr; Open Anyway. Every release is signed with the same certificate, so the Accessibility permission carries over to updates; macOS may ask you to choose Open Anyway again after an update. The code is open, so you can audit it or build it yourself.</p></details>
     <details><summary>Which macOS versions are supported?</summary><p>macOS 15 Sequoia or later.</p></details>
     <details><summary>Will I lose icons if it crashes?</summary><p>No. The divider's length is restored at launch and at quit, so a crash never leaves an icon hidden.</p></details>
     <details><summary>How do I uninstall it?</summary><p>Quit Hidebar from its menu, then run <code>brew uninstall --zap --cask hidebar</code>. If you installed from the DMG, drag the app to the Trash.</p></details>

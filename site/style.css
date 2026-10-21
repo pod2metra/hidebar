@@ -132,6 +132,9 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
 .step { background: var(--bg-alt); border: 1px solid var(--line); border-radius: 16px; padding: 20px; min-width: 0; }
 .step p { color: var(--muted); margin: 0.6rem 0 0; }
 .step pre { font-size: 0.88em; }
+.first-launch { margin-top: 16px; }
+.first-launch ol { margin: 0.6rem 0 0; padding-left: 1.4rem; color: var(--muted); }
+.first-launch li::marker { color: var(--accent-text); font-weight: 700; }
 pre { margin: 0; padding: 12px 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
 
 .usage { margin: 24px 0 0; padding-left: 1.4rem; max-width: 720px; }
