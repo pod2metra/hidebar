@@ -53,7 +53,8 @@ Hidebar puts one divider in the menu bar: a pipe (`|`) and an arrow to the right
 
 - **Collapse and expand.** Click the arrow. Everything left of the pipe is hidden; click again to bring it back. Hidebar always starts expanded.
 - **Choose what is hidden.** Hold ⌘ and drag an icon (the system's own gesture) to the left of the pipe to hide it, or to the right to keep it visible. Keep the arrow right of the pipe: if it would be hidden along with the icons, Hidebar does not collapse.
-- **Menu.** Right-click, Control-click or middle-click the pipe or the arrow for: How to Use Hidebar…, Quit Hidebar. While Accessibility is off the menu also has Reach Icons Behind the Notch….
+- **Menu.** Right-click, Control-click or middle-click the pipe or the arrow for: Open at Login, How to Use Hidebar…, Quit Hidebar. While Accessibility is off the menu also has Reach Icons Behind the Notch….
+- **Open at Login.** On its very first launch Hidebar adds itself to your login items, so it starts when you log in. Untick **Open at Login** in the menu, or switch it off in System Settings → General → Login Items; Hidebar never turns it back on. If macOS needs your approval, the item shows a dash, and clicking it opens Login Items settings. It needs no extra permission.
 - **Overflow strip.** Icons right of the pipe that do not fit the bar, because they sit under the notch or the app menus, appear in a scrollable strip below the bar, each with its app name and icon. Click one there to click the real icon.
 - **Notch indicator.** While some icons are behind the notch or the app menus, a small orange dot sits on the arrow, and its tooltip says how many. With no hidden icons the arrow looks as usual. Seeing which icons are hidden needs no permission; the app menus' width is only known with Accessibility, so without it only the icons under the notch are counted.
 
@@ -69,7 +70,7 @@ macOS ties the grant to the app's code signature. Hidebar is not sandboxed, beca
 
 ## Privacy
 
-No telemetry and no network access. Hidebar stores only the positions of its own two menu-bar items. It does not record the screen.
+No telemetry and no network access. Hidebar stores only the positions of its own two menu-bar items and a flag that it has already added itself to login items once. Nothing leaves your Mac. It does not record the screen.
 
 ## Known limitations
 

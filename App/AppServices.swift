@@ -15,6 +15,8 @@ final class AppServices {
     /// Where `discovery` runs when the main thread must stay free.
     let background = BackgroundQueue()
     let menus = MenusExtent()
+    let loginItem: SMAppServiceLoginItem
+    let loginItemPolicy: LoginItemPolicy
 
     init() {
         let windows = CGWindowListSource()
@@ -41,5 +43,8 @@ final class AppServices {
             separator: separatorItems.controller, clickProxy: proxy, clock: moveClock, locator: locator,
             discover: { discovery.discover() })
         self.discovery = discovery
+        let loginItem = SMAppServiceLoginItem()
+        self.loginItem = loginItem
+        loginItemPolicy = LoginItemPolicy(item: loginItem, offers: UserDefaultsOfferStore())
     }
 }

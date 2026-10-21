@@ -1,24 +1,32 @@
 import AppKit
+import HidebarCore
 
-/// The menu of the separator's items: the Accessibility request (while it is off), the help, Quit.
+/// The menu of the separator's items: the Accessibility request (while it is off), Open at Login,
+/// the help, Quit.
 @MainActor
 final class AppMenu: NSObject {
     /// Called when the user chooses to reach the icons that are out of reach.
     var onReachIcons: () -> Void = {}
+    /// Called when the user chooses Open at Login.
+    var onToggleLoginItem: () -> Void = {}
 
     /// Opens the menu under `statusItem`, highlighting its button while the menu is up.
-    /// `reachIconsTitle` is the request's item; `nil` leaves it out.
-    func show(under statusItem: NSStatusItem, reachIconsTitle: String?) {
-        statusItem.menu = makeMenu(reachIconsTitle: reachIconsTitle)
+    /// `reachIconsTitle` is the request's item; `nil` leaves it out. `openAtLogin` is the check
+    /// mark of Open at Login.
+    func show(under statusItem: NSStatusItem, reachIconsTitle: String?, openAtLogin: LoginItemMenuState) {
+        statusItem.menu = makeMenu(reachIconsTitle: reachIconsTitle, openAtLogin: openAtLogin)
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
     }
 
-    private func makeMenu(reachIconsTitle: String?) -> NSMenu {
+    private func makeMenu(reachIconsTitle: String?, openAtLogin: LoginItemMenuState) -> NSMenu {
         let menu = NSMenu()
         if let reachIconsTitle {
             menu.addItem(withTitle: reachIconsTitle, action: #selector(reachIcons), keyEquivalent: "").target = self
         }
+        let loginItem = menu.addItem(withTitle: "Open at Login", action: #selector(toggleLoginItem), keyEquivalent: "")
+        loginItem.target = self
+        loginItem.state = NSControl.StateValue(rawValue: openAtLogin.rawValue)
         menu.addItem(withTitle: "How to Use Hidebar…", action: #selector(showHelp), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(
@@ -28,6 +36,10 @@ final class AppMenu: NSObject {
 
     @objc private func reachIcons() {
         onReachIcons()
+    }
+
+    @objc private func toggleLoginItem() {
+        onToggleLoginItem()
     }
 
     @objc private func showHelp() {
@@ -52,5 +64,7 @@ final class AppMenu: NSObject {
 
         Hidebar hides and shows icons without any permission. To click an icon in the strip it needs Accessibility; \
         while it is off, Hidebar asks when you click an icon in the strip, or when you choose "Reach Icons Behind the Notch…" in this menu.
+
+        Hidebar opens at login by default. Turn it off with "Open at Login" in this menu, or in System Settings → General → Login Items.
         """
 }

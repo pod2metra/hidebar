@@ -1,6 +1,9 @@
 import AppKit
 import HidebarCore
 import HidebarSystem
+import os
+
+private let loginLog = Logger(subsystem: "app.hidebar.Hidebar", category: "login")
 
 /// Connects what the user does (clicks, coming back to the app) to the core, and the core's
 /// answers to windows. It decides nothing itself: the order of work is `AppComposition`'s.
@@ -20,6 +23,7 @@ final class AppController: NSObject {
         services.separatorItems.onArrowClick = { [weak self] in self?.arrowClicked() }
         services.separatorItems.onMenuRequest = { [weak self] item in self?.showMenu(under: item) }
         menu.onReachIcons = { [weak self] in self?.requestAccessibility() }
+        menu.onToggleLoginItem = { [weak self] in self?.toggleLoginItem() }
         strip.onRowClick = { [weak self] activation in self?.handle(activation) }
         strip.onIndicatorChange = { [separatorItems = services.separatorItems] in separatorItems.show($0) }
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -30,8 +34,14 @@ final class AppController: NSObject {
             object: nil)
     }
 
-    /// Nothing is asked of the user at launch: hiding works without any permission.
+    /// Nothing is asked of the user at launch: hiding works without any permission. A Debug build
+    /// (run from DerivedData) never registers itself as a login item.
     func start() {
+        #if !DEBUG
+        if let error = services.loginItemPolicy.onLaunch() {
+            loginLog.error("could not open at login: \(error.localizedDescription, privacy: .public)")
+        }
+        #endif
         strip.barDidChange()
     }
 
@@ -73,7 +83,15 @@ final class AppController: NSObject {
     /// The request is in the menu only while Accessibility is off.
     private func showMenu(under item: NSStatusItem) {
         let title = PermissionPrompt.reachIconsMenuTitle(for: services.permissions.current())
-        menu.show(under: item, reachIconsTitle: title)
+        menu.show(
+            under: item, reachIconsTitle: title,
+            openAtLogin: LoginItemPolicy.menuState(for: services.loginItem.status))
+    }
+
+    private func toggleLoginItem() {
+        if let error = services.loginItemPolicy.toggle() {
+            loginLog.error("could not change open at login: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func handle(_ activation: RowActivation) {
