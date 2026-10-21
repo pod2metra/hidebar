@@ -66,7 +66,7 @@ p { margin: 0 0 1rem; }
 
 .wrap { width: 100%; max-width: 980px; margin: 0 auto; padding: 0 20px; }
 main section.wrap { padding-top: 72px; }
-.section-lead { color: var(--muted); max-width: 640px; margin: 0.8rem 0 2rem; }
+.section-lead { color: var(--muted); margin: 0.8rem 0 2rem; }
 
 .hero {
   text-align: center;
@@ -150,6 +150,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
 .steps { display: grid; align-items: start; gap: 16px; margin-top: 24px; }
 .step { background: var(--bg-alt); border: 1px solid var(--line); border-radius: 16px; padding: 20px; min-width: 0; }
 .step p { color: var(--muted); margin: 0.6rem 0 0; }
+.step pre { font-size: 0.88em; }
 pre { margin: 0; padding: 12px 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
 
 .usage { margin: 24px 0 0; padding-left: 1.4rem; max-width: 720px; }
@@ -169,6 +170,8 @@ details { border-bottom: 1px solid var(--line); padding: 5px 0; }
 details:first-of-type { margin-top: 24px; border-top: 1px solid var(--line); }
 summary { cursor: pointer; font-weight: 600; min-height: 44px; padding: 9px 0; }
 details p { margin: 0 0 14px; color: var(--muted); max-width: 70ch; }
+.faq-list { margin: -6px 0 14px; padding-left: 1.2rem; color: var(--muted); max-width: 70ch; }
+.faq-list li { margin-bottom: 4px; }
 
 footer { margin-top: 88px; border-top: 1px solid var(--line); padding: 16px 0 40px; color: var(--muted); font-size: 0.9rem; }
 .foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; }
@@ -192,8 +195,8 @@ footer { margin-top: 88px; border-top: 1px solid var(--line); padding: 16px 0 40
   .tray { gap: 8px; }
 }
 @media (min-width: 960px) {
-  .steps { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
-  .step:first-child { grid-column: 1 / -1; }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .step:last-child { grid-column: 2; grid-row: 1 / span 2; }
 }
 @media (min-width: 720px) {
   .cards { grid-template-columns: repeat(3, 1fr); }

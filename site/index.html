@@ -83,7 +83,7 @@
     <p class="section-lead">Hidebar asks for the Accessibility permission, so you should be able to read what it does with it.</p>
     <ul class="cards">
       <li><h3>Auditable</h3><p>The whole app is on GitHub under the MIT license. Read it, build it yourself, or send a fix.</p></li>
-      <li><h3>No telemetry</h3><p>No analytics, no accounts, no network access. Nothing leaves your Mac.</p></li>
+      <li><h3>No telemetry</h3><p>No analytics, no accounts, no network access. Nothing about you ever leaves your Mac.</p></li>
       <li><h3>Degrades gracefully</h3><p>If a permission is missing, Hidebar keeps working with fewer features instead of failing.</p></li>
     </ul>
   </section>
@@ -116,19 +116,20 @@ make run</code></pre>
     <ol class="usage">
       <li><strong>Arrange.</strong> Hold <kbd>&#8984;</kbd> and drag an icon to the left of the pipe to hide it, or to the right to keep it visible. This is the system's own gesture.</li>
       <li><strong>Collapse.</strong> Click the arrow to hide everything left of the pipe, and click it again to show it. Hidebar refuses to hide icons when the arrow would go with them.</li>
-      <li><strong>Menu.</strong> Right-click, Control-click or middle-click the pipe or the arrow for the menu: Show Icon Images… (while Screen Recording is off), How to Use Hidebar…, Quit Hidebar.</li>
-      <li><strong>Overflow strip.</strong> Visible icons that don't fit the bar, behind the notch or under long app menus, appear in a strip below the menu bar. Click one to open its own menu.</li>
+      <li><strong>Menu.</strong> Right-click, Control-click or middle-click the pipe or the arrow for the menu: How to Use Hidebar…, Quit Hidebar.</li>
+      <li><strong>Overflow strip.</strong> Icons that don't fit the bar, behind the notch or under long app menus, appear in a strip below the menu bar, and a dot on the arrow tells you some are there. Scroll the strip to see them all; click one to open its own menu.</li>
+      <li><strong>Get everything back.</strong> Hidebar always starts expanded. If the arrow is ever out of reach, launch the app again to bring every icon back.</li>
     </ol>
   </section>
 
   <section class="wrap" aria-labelledby="perms">
     <h2 id="perms">Permissions</h2>
+    <p class="section-lead">Hidebar needs one permission, and only asks for it when you click an icon in the strip. Hiding works without it.</p>
     <div class="table-scroll">
       <table>
         <thead><tr><th scope="col">Permission</th><th scope="col">Why</th><th scope="col">Without it</th></tr></thead>
         <tbody>
           <tr><th scope="row">Accessibility</th><td data-label="Why">Finds which app owns each icon and clicks icons in the overflow strip.</td><td data-label="Without it">Hiding still works. The strip lists icons but can't click them.</td></tr>
-          <tr><th scope="row">Screen Recording <small>(optional)</small></th><td data-label="Why">Captures the images of icons in the strip. Not asked for at launch; choose Show Icon Images… in the menu.</td><td data-label="Without it">The strip shows each app's name and icon instead of a snapshot.</td></tr>
         </tbody>
       </table>
     </div>
@@ -136,7 +137,8 @@ make run</code></pre>
 
   <section class="wrap" aria-labelledby="faq">
     <h2 id="faq">FAQ</h2>
-    <details><summary>What about the notch?</summary><p>Icons that end up behind the notch or under a long app menu aren't hidden, they're just unreachable. Hidebar shows them in a strip below the menu bar so you can still click them.</p></details>
+    <details><summary>Why not just use Hidden Bar?</summary><p>Hidebar follows the same idea as Hidden Bar: one divider, one click. I kept running into bugs with it in my daily work, so I built the one I wanted and took it as a chance to try low-level macOS development. What Hidebar does differently:</p><ul class="faq-list"><li>icons stuck behind the notch or under a long app menu stay in a scrollable strip below the bar, always one click away, not tucked into a menu;</li><li>it refuses to collapse when the arrow itself would be hidden, so the divider can't vanish and lock you out;</li><li>the divider is reset at launch and at quit, so a crash never leaves icons hidden;</li><li>a dot on the arrow tells you when icons are stuck behind the notch, even before you grant any permission;</li><li>one permission, Accessibility, asked for only when you need it; hiding works without it;</li><li>the core logic has full test coverage and is checked with mutation testing.</li></ul></details>
+    <details><summary>What about the notch?</summary><p>Icons that end up behind the notch or under a long app menu aren't hidden, they're just unreachable. Hidebar puts a dot on the arrow when that happens and shows them in a strip below the menu bar so you can still click them.</p></details>
     <details><summary>Why does it need Accessibility?</summary><p>macOS offers no public way to learn which app owns an icon, or to click it for you. Accessibility is how Hidebar reads icon positions and clicks icons in the strip. Hiding with the divider works without it.</p></details>
     <details><summary>Does it phone home?</summary><p>No. Hidebar has no telemetry and makes no network connections. The code is public, so you can check.</p></details>
     <details><summary>Which macOS versions are supported?</summary><p>macOS 15 Sequoia or later.</p></details>
