@@ -34,8 +34,8 @@ The project signs with `CODE_SIGN_IDENTITY = "-"` (ad-hoc) and no development te
 so it builds and runs on any machine without an Apple account. With ad-hoc signing
 Xcode also disables the hardened runtime for the build.
 
-macOS ties Accessibility and Screen Recording grants to the app's code signature.
-An ad-hoc signature changes on every build, so the grants can be reset after each
+macOS ties the Accessibility grant to the app's code signature.
+An ad-hoc signature changes on every build, so the grant can be reset after each
 rebuild. Two builds at different paths (for example `build/dd` and Xcode's
 DerivedData) also count as different apps.
 
@@ -46,7 +46,7 @@ bash scripts/dev_cert.sh   # once: creates "Hidebar Local Signing" in the login 
 make run                   # every time: builds at build/dd, signs, quits the old copy, launches
 ```
 
-Grant the permissions once after the first `make run`; later rebuilds keep them. Launch
+Grant Accessibility once after the first `make run`; later rebuilds keep it. Launch
 the app only through `make run`, not with Xcode's Run button, which still signs ad-hoc
 into DerivedData. If a grant was given to an older build, reset it (below) and grant again.
 
@@ -63,11 +63,10 @@ into `project.pbxproj`, so discard that change before committing
 (`git restore Hidebar.xcodeproj/project.pbxproj`). For command-line builds pass it
 per invocation instead: `xcodebuild ... DEVELOPMENT_TEAM=<your team id>`.
 
-If a grant gets stuck, reset it and re-grant on the next launch:
+If the grant gets stuck, reset it and grant it again on the next launch:
 
 ```bash
 tccutil reset Accessibility app.hidebar.Hidebar
-tccutil reset ScreenCapture app.hidebar.Hidebar
 ```
 
 Release builds use Developer ID signing, the hardened runtime and notarization;

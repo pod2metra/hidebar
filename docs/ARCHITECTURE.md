@@ -6,7 +6,7 @@ AppKit code.
 | Layer | Where | Rule |
 |---|---|---|
 | `HidebarCore` | `HidebarKit/Sources/HidebarCore` | Pure logic: discovery, clicking, moving, overflow, composition. Depends on protocols only, so it is tested without a screen |
-| `HidebarSystem` | `HidebarKit/Sources/HidebarSystem` | Adapters to CoreGraphics, Accessibility, ScreenCaptureKit and AppKit. No branching or loops, at most 40 lines per file |
+| `HidebarSystem` | `HidebarKit/Sources/HidebarSystem` | Adapters to CoreGraphics, Accessibility and AppKit. No branching or loops, at most 40 lines per file |
 | `App/` | `App/` | AppKit windows and wiring. No logic |
 
 `HidebarCore` folders: `StatusBar/` (the separator and its collapse guard), `Discovery/`,
@@ -24,9 +24,9 @@ AppKit code.
   launch, so a crash cannot leave icons hidden.
 - Before hiding, `CollapseGuard` compares the positions of the pipe and the arrow. If the
   arrow is left of the pipe, or either has no frame on the bar, nothing is hidden.
-- Icons that do not fit the bar are listed in the overflow strip. Their images are captured
-  with ScreenCaptureKit when Screen Recording is granted; otherwise a row shows the app
-  name and its icon.
+- Icons that do not fit the bar are listed in the overflow strip. A row shows the owning
+  app's name and its icon; Hidebar never captures the screen, so Accessibility is the only
+  permission it asks for.
 - Clicking a row in the strip moves the real icon next to the pipe with a synthetic
   Command-drag (`Moving/`), verifies the result by reading the icon's frame again, clicks
   it, and returns it when its menu closes (`Groups/ClickProxy`).

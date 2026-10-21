@@ -28,30 +28,21 @@ public final class OverflowStripViewModel {
         itemWidths.prefix(index).reduce(0, +) + spacing * Double(index)
     }
 
-    private let snapshotter: any Snapshotting
     private let names: ItemNames
     private let clickIcon: @MainActor (MenuBarItemID) -> ClickOutcome
-    private var generation = 0
 
     /// `click` is how an icon gets clicked; the app passes `AppComposition.click`, so every click
     /// from the strip is made with the separator revealed and the icon put back afterwards.
-    public init(
-        snapshotter: any Snapshotting, names: ItemNames,
-        click: @escaping @MainActor (MenuBarItemID) -> ClickOutcome
-    ) {
-        self.snapshotter = snapshotter
+    public init(names: ItemNames, click: @escaping @MainActor (MenuBarItemID) -> ClickOutcome) {
         self.names = names
         self.clickIcon = click
     }
 
-    /// Rebuilds the rows at once, keeping the scroll offset within the new content, then upgrades
-    /// them to snapshots one by one. A newer call supersedes this one: its late snapshots are dropped.
+    /// Rebuilds the rows, keeping the scroll offset within the new content.
     public func recompute(
         screen: OverflowCalculator, viewportWidth: Double, items: [DiscoveredItem],
         capabilities: Capabilities
-    ) async {
-        generation += 1
-        let mine = generation
+    ) {
         let rightToLeft = Self.rightToLeft(Self.visibleSection(items))
         let overflow = screen.partition(itemWidths: rightToLeft.map(Self.width)).overflow
         let strip = rightToLeft[overflow].reversed().filter(Self.isForeign)
@@ -61,8 +52,6 @@ public final class OverflowStripViewModel {
             contentWidth: Self.contentWidth(itemWidths, spacing: spacing), viewportWidth: viewportWidth,
             offset: scrollModel.offset)
         rows = strip.map { Self.row(for: $0, named: names.name(of: $0.item.id), capabilities: capabilities) }
-        guard capabilities.panelPresentation == .snapshots else { return }
-        await loadSnapshots(for: strip, generation: mine)
     }
 
     public func scroll(_ input: ScrollInput) {
@@ -74,14 +63,6 @@ public final class OverflowStripViewModel {
     public func click(rowAt index: Int) -> ClickOutcome? {
         guard rows.indices.contains(index), rows[index].isClickable else { return nil }
         return clickIcon(rows[index].id)
-    }
-
-    private func loadSnapshots(for strip: [DiscoveredItem], generation mine: Int) async {
-        for (index, item) in strip.enumerated() {
-            let image = await snapshotter.snapshot(ofWindow: item.windowID)
-            guard mine == generation else { return }
-            if let image { rows[index].content = .snapshot(image) }
-        }
     }
 
     /// The separator and everything right of it; all items when the separator is not on the bar.
@@ -117,7 +98,7 @@ public final class OverflowStripViewModel {
         for found: DiscoveredItem, named name: String, capabilities: Capabilities
     ) -> GroupPanelRow {
         GroupPanelRow(
-            id: found.item.id, name: name, content: .appName,
+            id: found.item.id, name: name,
             isClickable: capabilities.canMove && found.isManaged && found.item.isMovable)
     }
 }

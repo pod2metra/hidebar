@@ -66,16 +66,15 @@ import Testing
         #expect(scene.separator.state == .hiding)
     }
 
-    @Test func aClickFromTheOverflowStripRevealsTheSeparatorLikeAnyOtherClick() async {
+    @Test func aClickFromTheOverflowStripRevealsTheSeparatorLikeAnyOtherClick() {
         let composition = composition
-        let strip = OverflowStripViewModel(
-            snapshotter: FakeSnapshotter(), names: unknownApps, click: { composition.click($0) })
+        let strip = OverflowStripViewModel(names: unknownApps, click: { composition.click($0) })
         // Room for two of the three 10-wide icons: `a` is left over.
         let screen = OverflowCalculator(
             screenWidth: 25, notchRightArea: nil, menusWidth: 0, spacing: 0)
-        await strip.recompute(
+        strip.recompute(
             screen: screen, viewportWidth: 25, items: scene.found,
-            capabilities: PermissionsState(accessibility: true, screenRecording: false).capabilities)
+            capabilities: PermissionsState(accessibility: true).capabilities)
         #expect(strip.rows.map(\.id) == [moveID("a")])
         scene.script(wait: 2, moves: "a", to: 22)
 

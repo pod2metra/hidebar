@@ -1,7 +1,7 @@
 #!/bin/bash
 # Creates a self-signed code-signing certificate in the login keychain, once.
 # Builds signed with it keep the same designated requirement, so macOS keeps the
-# Accessibility and Screen Recording grants across rebuilds. Local use only: the
+# Accessibility grant across rebuilds. Local use only: the
 # certificate is not trusted by any other Mac and cannot be notarized.
 set -euo pipefail
 

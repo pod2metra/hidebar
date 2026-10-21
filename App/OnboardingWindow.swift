@@ -2,21 +2,10 @@ import AppKit
 import ApplicationServices
 import HidebarCore
 
-/// Lists the required permissions that are still missing, each with a button that asks the system
-/// for it and opens the System Settings pane. The window closes by itself once nothing is missing.
-/// Optional permissions are offered from the status menu instead.
+/// Asks for Accessibility while it is missing: a button registers the app in the permission's
+/// list in System Settings and opens that pane. The window closes by itself once it is granted.
 @MainActor
 final class OnboardingWindow: NSObject {
-    private final class PermissionButton: NSButton {
-        var permission = Permission.accessibility
-    }
-
-    /// Registers the app in the permission's list in System Settings; the user still has to
-    /// switch it on there.
-    private static let requests: [Permission: () -> Void] = [
-        .accessibility: { _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) }
-    ]
-
     private let window = NSWindow(
         contentRect: NSRect(x: 0, y: 0, width: 440, height: 100),
         styleMask: [.titled, .closable], backing: .buffered, defer: true)
@@ -27,17 +16,17 @@ final class OnboardingWindow: NSObject {
         window.isReleasedWhenClosed = false
     }
 
-    /// Shows the missing required permissions of `state`, or closes the window when there are none.
+    /// Shows the Accessibility request while `state` lacks it, or closes the window when it is granted.
     func update(_ state: PermissionsState) {
-        guard !state.missingRequired.isEmpty else {
+        guard !state.accessibility else {
             window.orderOut(nil)
             return
         }
         let intro = NSTextField(
             wrappingLabelWithString:
-                "Hidebar still works without these permissions, with fewer features. "
-                + "Switch them on in System Settings, then come back to this app.")
-        let root = NSStackView(views: [intro] + state.missingRequired.map(block(for:)))
+                "Hidebar still works without this permission, with fewer features. "
+                + "Switch it on in System Settings, then come back to this app.")
+        let root = NSStackView(views: [intro, accessibilityBlock()])
         root.orientation = .vertical
         root.alignment = .leading
         root.spacing = 14
@@ -49,14 +38,13 @@ final class OnboardingWindow: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    private func block(for permission: Permission) -> NSView {
-        let prompt = PermissionPrompt.prompt(for: permission)
+    private func accessibilityBlock() -> NSView {
+        let prompt = PermissionPrompt.accessibility
         let title = NSTextField(labelWithString: prompt.title)
         title.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
         let detail = NSTextField(wrappingLabelWithString: prompt.detail)
         detail.preferredMaxLayoutWidth = 400
-        let button = PermissionButton(title: "Open System Settings", target: self, action: #selector(open(_:)))
-        button.permission = permission
+        let button = NSButton(title: "Open System Settings", target: self, action: #selector(open))
         let column = NSStackView(views: [title, detail, button])
         column.orientation = .vertical
         column.alignment = .leading
@@ -64,9 +52,8 @@ final class OnboardingWindow: NSObject {
         return column
     }
 
-    @objc private func open(_ sender: PermissionButton) {
-        Self.requests[sender.permission]?()
-        URL(string: PermissionPrompt.prompt(for: sender.permission).settingsURL)
-            .map { _ = NSWorkspace.shared.open($0) }
+    @objc private func open() {
+        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        URL(string: PermissionPrompt.accessibility.settingsURL).map { _ = NSWorkspace.shared.open($0) }
     }
 }

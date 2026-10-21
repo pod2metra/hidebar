@@ -6,7 +6,6 @@ import HidebarSystem
 @MainActor
 final class AppServices {
     let permissions = TCCPermissionChecker()
-    let snapshotter = SCKSnapshotter()
     /// App names for everything the user reads; identities stay bundle ids.
     let names = ItemNames(apps: WorkspaceAppNames())
     let separatorItems = SeparatorItems()

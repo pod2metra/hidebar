@@ -142,8 +142,8 @@ bash scripts/notarize.sh build/Hidebar-0.2.0.dmg
 
 ## Notes
 
-- Accessibility and Screen Recording grants are tied to the code signature. Because every
-  release is signed with the same Developer ID, users keep their grants across updates.
+- The Accessibility grant is tied to the code signature. Because every
+  release is signed with the same Developer ID, users keep their grant across updates.
 - The Release run builds the DMG with Xcode 27.0 and fails unless `xcodebuild -version`
   reports exactly `XCODE_VERSION` and `XCODE_BUILD` from `release.yml`. That is a version and
   build pin, not a beta detector: before raising it, confirm from the runner image notes that

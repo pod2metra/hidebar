@@ -71,7 +71,8 @@ public struct ItemDiscovery: Sendable {
     ///
     /// An item is managed only when Accessibility named its owner. Without that answer the
     /// window's own owner and title are not an identity: on macOS 26 the owner is Control Center
-    /// for every item, and elsewhere the title is empty without Screen Recording, so an ID built
+    /// for every item, and elsewhere the title is empty (the system withholds window titles from
+    /// apps without screen-capture access, which Hidebar never asks for), so an ID built
     /// from them would change once Accessibility is granted and orphan the saved layout. Such an
     /// item is unmanaged (visible, never moved, never saved); its ID is only a display fallback.
     /// Resolved items that share one ID are all unmanaged too.
@@ -135,5 +136,13 @@ public struct ItemDiscovery: Sendable {
         return DiscoveredItem(
             windowID: candidate.window.windowID, ownerPID: candidate.window.ownerPID, item: item,
             isManaged: isManaged)
+    }
+}
+
+extension Array where Element == DiscoveredItem {
+    /// The only sanctioned way from an item id to its window: the fallback id of an
+    /// unmanaged icon can equal a managed one, so unmanaged entries never match.
+    func managedItem(_ id: MenuBarItemID) -> DiscoveredItem? {
+        first { $0.isManaged && $0.item.id == id }
     }
 }

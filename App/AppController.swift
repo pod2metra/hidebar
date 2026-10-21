@@ -14,7 +14,7 @@ final class AppController: NSObject {
 
     override init() {
         strip = OverflowStripWindow(services: services)
-        menu = AppMenu(permissions: services.permissions)
+        menu = AppMenu()
         permissions = services.permissions.current()
         super.init()
         services.separatorItems.onArrowClick = { [weak self] in self?.arrowClicked() }

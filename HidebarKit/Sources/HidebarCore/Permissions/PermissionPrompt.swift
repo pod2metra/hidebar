@@ -1,4 +1,4 @@
-/// What onboarding tells the user about one permission, and where to grant it.
+/// What onboarding tells the user about the Accessibility permission, and where to grant it.
 public struct PermissionPrompt: Equatable, Sendable {
     public let title: String
     /// What works with the permission and what the app does without it (rule 3).
@@ -6,18 +6,8 @@ public struct PermissionPrompt: Equatable, Sendable {
     /// The System Settings pane that holds the switch, as a URL string.
     public let settingsURL: String
 
-    public static func prompt(for permission: Permission) -> PermissionPrompt {
-        switch permission {
-        case .accessibility:
-            PermissionPrompt(
-                title: "Accessibility",
-                detail: "Lets Hidebar click the icons in the overflow strip and tell which app owns each one. Without it the section can only be collapsed and expanded, and the strip's icons are not clickable.",
-                settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
-        case .screenRecording:
-            PermissionPrompt(
-                title: "Screen Recording",
-                detail: "Optional. Lets Hidebar show the real icons in the overflow strip. Without it the strip shows app names instead, and its rows still work.",
-                settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
-        }
-    }
+    public static let accessibility = PermissionPrompt(
+        title: "Accessibility",
+        detail: "Lets Hidebar click the icons in the overflow strip and tell which app owns each one. Without it the section can only be collapsed and expanded, and the strip's icons are not clickable.",
+        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
 }

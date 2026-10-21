@@ -1,16 +1,8 @@
 import AppKit
-import HidebarCore
-import HidebarSystem
 
-/// The menu of the separator's items: Screen Recording on request, the help, Quit.
+/// The menu of the separator's items: the help, Quit.
 @MainActor
 final class AppMenu: NSObject {
-    private let permissions: TCCPermissionChecker
-
-    init(permissions: TCCPermissionChecker) {
-        self.permissions = permissions
-    }
-
     /// Opens the menu under `statusItem`, highlighting its button while the menu is up.
     func show(under statusItem: NSStatusItem) {
         statusItem.menu = makeMenu()
@@ -20,22 +12,11 @@ final class AppMenu: NSObject {
 
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
-        if !permissions.current().screenRecording {
-            menu.addItem(withTitle: "Show Icon Images…", action: #selector(requestScreenRecording), keyEquivalent: "")
-                .target = self
-        }
         menu.addItem(withTitle: "How to Use Hidebar…", action: #selector(showHelp), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(
             withTitle: "Quit Hidebar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
-    }
-
-    /// Screen Recording is optional: it is requested only when the user asks for icon images.
-    @objc private func requestScreenRecording() {
-        _ = CGRequestScreenCaptureAccess()
-        URL(string: PermissionPrompt.prompt(for: .screenRecording).settingsURL)
-            .map { _ = NSWorkspace.shared.open($0) }
     }
 
     @objc private func showHelp() {
@@ -57,7 +38,6 @@ final class AppMenu: NSObject {
         Visible icons that do not fit the menu bar (behind the notch or under the app's menus) appear in a strip below it. \
         Scroll the strip to see them all.
 
-        Permissions: Accessibility lets you click the icons in the strip. \
-        Screen Recording shows their images instead of app names; choose Show Icon Images… to turn it on.
+        Permissions: Accessibility lets you click the icons in the strip.
         """
 }

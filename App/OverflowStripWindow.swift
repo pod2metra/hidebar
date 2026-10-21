@@ -32,9 +32,7 @@ final class OverflowStripWindow: NSObject {
 
     init(services: AppServices) {
         self.services = services
-        viewModel = OverflowStripViewModel(
-            snapshotter: services.snapshotter, names: services.names,
-            click: services.composition.click)
+        viewModel = OverflowStripViewModel(names: services.names, click: services.composition.click)
         super.init()
         strip.material = .menu
         strip.state = .active
@@ -64,9 +62,9 @@ final class OverflowStripWindow: NSObject {
         }
         let calculator = OverflowCalculator(
             screenWidth: frame.width, notchRightArea: notch, menusWidth: menusEdge, spacing: 0)
-        await viewModel.recompute(
-            screen: calculator, viewportWidth: frame.width - calculator.leftLimit,
-            items: services.discovery.discover(on: services.background),
+        let items = await services.discovery.discover(on: services.background)
+        viewModel.recompute(
+            screen: calculator, viewportWidth: frame.width - calculator.leftLimit, items: items,
             capabilities: services.permissions.current().capabilities)
         place(on: screen, from: calculator.leftLimit)
         drawRows()

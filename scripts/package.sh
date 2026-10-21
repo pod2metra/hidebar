@@ -111,7 +111,7 @@ if [ "$mode" = adhoc ]; then
     cat >&2 <<'NOTE'
 
 NOTE: this build is signed ad hoc. macOS Gatekeeper will refuse it on other machines, and
-its Accessibility and Screen Recording grants do not survive an update. To distribute it,
+its Accessibility grant does not survive an update. To distribute it,
 use the release-app and release-dmg phases with a Developer ID identity and notarize both
 artifacts; see docs/RELEASING.md.
 NOTE

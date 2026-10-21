@@ -18,10 +18,8 @@ import Testing
     }
 
     private let clicks = ClickLog()
-    private let snapshotter = FakeSnapshotter()
-    private let full = PermissionsState(accessibility: true, screenRecording: true).capabilities
-    private let accessibilityOnly = PermissionsState(accessibility: true, screenRecording: false).capabilities
-    private let none = PermissionsState(accessibility: false, screenRecording: false).capabilities
+    private let granted = PermissionsState(accessibility: true).capabilities
+    private let none = PermissionsState(accessibility: false).capabilities
     private let screen = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 20, spacing: 5)
 
     private func entry(
@@ -45,7 +43,6 @@ import Testing
 
     private var viewModel: OverflowStripViewModel {
         OverflowStripViewModel(
-            snapshotter: snapshotter,
             names: ItemNames(apps: StubAppNames(names: ["com.example.app": "Example"])),
             click: { [clicks] in clicks.click($0) })
     }
@@ -53,59 +50,56 @@ import Testing
     private func recompute(
         _ model: OverflowStripViewModel, items: [DiscoveredItem]? = nil, viewport: Double = 40,
         screen custom: OverflowCalculator? = nil, capabilities: Capabilities? = nil
-    ) async {
-        await model.recompute(
+    ) {
+        model.recompute(
             screen: custom ?? screen, viewportWidth: viewport, items: items ?? scene,
-            capabilities: capabilities ?? full)
+            capabilities: capabilities ?? granted)
     }
-
-    private func image() -> SnapshotImage { SnapshotImage(payload: FakeImage()) }
 
     // MARK: partition into rows
 
-    @Test func rowsAreTheItemsThatDoNotFitInBarOrder() async {
+    @Test func rowsAreTheItemsThatDoNotFitInBarOrder() {
         let model = viewModel
-        await recompute(model)
+        recompute(model)
         #expect(model.rows.map(\.id) == [moveID("a"), moveID("b")])
         #expect(!model.isHidden)
     }
 
-    @Test func everythingFittingHidesTheStrip() async {
+    @Test func everythingFittingHidesTheStrip() {
         let model = viewModel
-        await recompute(model, items: [scene[0]])
+        recompute(model, items: [scene[0]])
         #expect(model.rows.isEmpty)
         #expect(model.isHidden)
         #expect(model.scrollModel.contentWidth == 0)
         #expect(model.visibleRange == 0..<0)
-        #expect(snapshotter.requested.isEmpty)
     }
 
-    @Test func noItemsHidesTheStrip() async {
+    @Test func noItemsHidesTheStrip() {
         let model = viewModel
-        await recompute(model, items: [])
+        recompute(model, items: [])
         #expect(model.isHidden)
     }
 
-    @Test func spacingAndMenusWidthComeFromTheScreen() async {
+    @Test func spacingAndMenusWidthComeFromTheScreen() {
         let model = viewModel
         let roomy = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 0, spacing: 0)
-        await recompute(model, screen: roomy)
+        recompute(model, screen: roomy)
         #expect(model.rows.map(\.id) == [moveID("a")])
         #expect(model.scrollModel.contentWidth == 30)
     }
 
-    @Test func notchPushesTheLeftLimitSoMoreItemsOverflow() async {
+    @Test func notchPushesTheLeftLimitSoMoreItemsOverflow() {
         let model = viewModel
         let notched = OverflowCalculator(
             screenWidth: 100, notchRightArea: BarRect(x: 50, y: 0, width: 50, height: 20), menusWidth: 20, spacing: 5)
-        await recompute(model, screen: notched)
+        recompute(model, screen: notched)
         #expect(model.rows.map(\.id) == [moveID("a"), moveID("b"), moveID("c")])
     }
 
-    @Test func itemsAtTheSamePositionKeepTheirInputOrderFromTheRight() async {
+    @Test func itemsAtTheSamePositionKeepTheirInputOrderFromTheRight() {
         let model = viewModel
         let nothingFits = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 100, spacing: 0)
-        await recompute(
+        recompute(
             model, items: [entry("p", x: 5, width: 10), entry("q", x: 5, width: 10)], screen: nothingFits)
         #expect(model.rows.map(\.id) == [moveID("q"), moveID("p")])
     }
@@ -123,45 +117,45 @@ import Testing
 
     private var separator: DiscoveredItem { own(OwnItems.separatorTitle, x: 0, width: 10) }
 
-    @Test func iconsLeftOfTheSeparatorAreNeverRows() async {
+    @Test func iconsLeftOfTheSeparatorAreNeverRows() {
         let model = viewModel
-        await recompute(model, items: scene + [separator, entry("hidden", x: -60, width: 30)])
+        recompute(model, items: scene + [separator, entry("hidden", x: -60, width: 30)])
         #expect(model.rows.map(\.id) == [moveID("a"), moveID("b")])
     }
 
-    @Test func theSeparatorDoesNotBecomeARowEvenWhenItOverflows() async {
+    @Test func theSeparatorDoesNotBecomeARowEvenWhenItOverflows() {
         let model = viewModel
         let nothingFits = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 100, spacing: 0)
-        await recompute(model, items: scene + [separator], screen: nothingFits)
+        recompute(model, items: scene + [separator], screen: nothingFits)
         #expect(model.rows.map(\.id) == [moveID("a"), moveID("b"), moveID("c"), moveID("d")])
     }
 
-    @Test func ownIconsTakeRoomOnTheBarButAreNotRows() async {
+    @Test func ownIconsTakeRoomOnTheBarButAreNotRows() {
         let model = viewModel
         // d and c fit in 80 points without the arrow; with it (30 wide) c no longer does.
-        await recompute(model, items: scene + [separator, own("Hidebar arrow", x: 240, width: 30)])
+        recompute(model, items: scene + [separator, own("Hidebar arrow", x: 240, width: 30)])
         #expect(model.rows.map(\.id) == [moveID("a"), moveID("b"), moveID("c")])
         #expect(model.itemWidths == [30, 40, 30])
         #expect(model.spacing == 5)
     }
 
-    @Test func anIconAtTheSeparatorsPositionIsStillInTheSection() async {
+    @Test func anIconAtTheSeparatorsPositionIsStillInTheSection() {
         let model = viewModel
         let nothingFits = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 100, spacing: 0)
-        await recompute(
+        recompute(
             model, items: [entry("edge", x: 0, width: 10), separator], screen: nothingFits)
         #expect(model.rows.map(\.id) == [moveID("edge")])
     }
 
-    @Test func withoutASeparatorEveryItemIsInTheSection() async {
+    @Test func withoutASeparatorEveryItemIsInTheSection() {
         let model = viewModel
-        await recompute(model, items: scene + [entry("far", x: -500, width: 30)])
+        recompute(model, items: scene + [entry("far", x: -500, width: 30)])
         #expect(model.rows.map(\.id) == [moveID("far"), moveID("a"), moveID("b")])
     }
 
     // MARK: rows
 
-    @Test func rowNameIsTheAppNameWithTheTitleOrTheBundleIdOfAnUnknownApp() async {
+    @Test func rowNameIsTheAppNameWithTheTitleOrTheBundleIdOfAnUnknownApp() {
         let titled = DiscoveredItem(
             windowID: 1, ownerPID: 688,
             item: MenuBarItem(
@@ -169,46 +163,46 @@ import Testing
                 frame: ItemFrame(x: 0, y: 0, width: 90, height: 20), isMovable: true),
             isManaged: true)
         let model = viewModel
-        await recompute(model, items: [titled, entry("u", x: 200, width: 90)], capabilities: none)
+        recompute(model, items: [titled, entry("u", x: 200, width: 90)], capabilities: none)
         #expect(model.rows.map(\.name) == ["Example — Sync", "test.u"])
     }
 
-    @Test func clickableMeansCanMoveAndManagedAndMovable() async {
+    @Test func clickableMeansCanMoveAndManagedAndMovable() {
         let items = [
             entry("ok", x: 0, width: 90), entry("unmanaged", x: 10, width: 90, managed: false),
             entry("pinned", x: 20, width: 90, movable: false), entry("edge", x: 500, width: 10),
         ]
         let model = viewModel
-        await recompute(model, items: items)
+        recompute(model, items: items)
         #expect(model.rows.map(\.id.ownerBundleID) == ["test.ok", "test.unmanaged", "test.pinned"])
         #expect(model.rows.map(\.isClickable) == [true, false, false])
 
-        await recompute(model, items: items, capabilities: none)
+        recompute(model, items: items, capabilities: none)
         #expect(model.rows.map(\.isClickable) == [false, false, false])
     }
 
     // MARK: scrolling
 
-    @Test func contentWidthAndVisibleRangeShareTheRowWidthsAndSpacing() async {
+    @Test func contentWidthAndVisibleRangeShareTheRowWidthsAndSpacing() {
         let model = viewModel
-        await recompute(model, viewport: 40)
+        recompute(model, viewport: 40)
         #expect(model.scrollModel.contentWidth == 75)
         #expect(model.scrollModel.viewportWidth == 40)
         #expect(model.scrollModel.maxOffset == 35)
         #expect(model.visibleRange == 0..<2)
     }
 
-    @Test func rowsStartOneWidthAndOneSpacingAfterTheRowBefore() async {
+    @Test func rowsStartOneWidthAndOneSpacingAfterTheRowBefore() {
         let model = viewModel
-        await recompute(model)
+        recompute(model)
         #expect(model.rowStart(at: 0) == 0)
         #expect(model.rowStart(at: 1) == 35)
         #expect(model.rowStart(at: 2) == 80)
     }
 
-    @Test func scrollingMovesTheOffsetAndTheVisibleRangeAndClampsAtBothEnds() async {
+    @Test func scrollingMovesTheOffsetAndTheVisibleRangeAndClampsAtBothEnds() {
         let model = viewModel
-        await recompute(model, viewport: 40)
+        recompute(model, viewport: 40)
         model.scroll(ScrollInput(deltaX: -20, deltaY: 0, hasPreciseDeltas: true))
         #expect(model.scrollModel.offset == 20)
         model.scroll(ScrollInput(deltaX: -50, deltaY: 0, hasPreciseDeltas: true))
@@ -219,98 +213,50 @@ import Testing
         #expect(model.visibleRange == 0..<2)
     }
 
-    @Test func wheelScrollsByLines() async {
+    @Test func wheelScrollsByLines() {
         let model = viewModel
-        await recompute(model, viewport: 40)
+        recompute(model, viewport: 40)
         model.scroll(ScrollInput(deltaX: 0, deltaY: -1, hasPreciseDeltas: false))
         #expect(model.scrollModel.offset == ScrollInput.pointsPerWheelLine)
     }
 
-    @Test func recomputeKeepsTheOffsetWhileItFitsAndClampsItWhenContentShrinks() async {
+    @Test func recomputeKeepsTheOffsetWhileItFitsAndClampsItWhenContentShrinks() {
         let model = viewModel
-        await recompute(model, viewport: 40)
+        recompute(model, viewport: 40)
         model.scroll(ScrollInput(deltaX: -30, deltaY: 0, hasPreciseDeltas: true))
-        await recompute(model, viewport: 40)
+        recompute(model, viewport: 40)
         #expect(model.scrollModel.offset == 30)
 
         let roomy = OverflowCalculator(screenWidth: 100, notchRightArea: nil, menusWidth: 0, spacing: 0)
-        await recompute(model, viewport: 40, screen: roomy)
+        recompute(model, viewport: 40, screen: roomy)
         #expect(model.scrollModel.contentWidth == 30)
         #expect(model.scrollModel.offset == 0)
     }
 
     // MARK: click
 
-    @Test func clickingAClickableRowClicksItsIconThroughTheInjectedAction() async {
+    @Test func clickingAClickableRowClicksItsIconThroughTheInjectedAction() {
         let model = viewModel
-        await recompute(model)
+        recompute(model)
         #expect(model.click(rowAt: 1) == .clicked)
         #expect(clicks.ids == [moveID("b")])
     }
 
-    @Test func theOutcomeOfTheActionIsPassedOn() async {
+    @Test func theOutcomeOfTheActionIsPassedOn() {
         clicks.outcome = .revealFailed
         let model = viewModel
-        await recompute(model)
+        recompute(model)
         #expect(model.click(rowAt: 0) == .revealFailed)
     }
 
-    @Test func clickOnAnUnclickableOrMissingRowClicksNothing() async {
+    @Test func clickOnAnUnclickableOrMissingRowClicksNothing() {
         let model = viewModel
-        await recompute(model, items: scene + [entry("pinned", x: 20, width: 90, movable: false)])
+        recompute(model, items: scene + [entry("pinned", x: 20, width: 90, movable: false)])
         let pinned = model.rows.firstIndex { $0.id == moveID("pinned") }
         #expect(pinned != nil)
         #expect(model.click(rowAt: pinned ?? 0) == nil)
         #expect(model.click(rowAt: model.rows.count) == nil)
         #expect(model.click(rowAt: -1) == nil)
         #expect(clicks.ids.isEmpty)
-    }
-
-    // MARK: snapshots
-
-    @Test func fullAccessUpgradesRowsToSnapshotsInStripOrder() async {
-        let a = image()
-        let b = image()
-        snapshotter.images = [1: a, 2: b]
-        let model = viewModel
-        await recompute(model)
-        #expect(model.rows.map(\.content) == [.snapshot(a), .snapshot(b)])
-        #expect(snapshotter.requested == [1, 2])
-    }
-
-    @Test func withoutScreenRecordingRowsStayAppNamesAndNothingIsCaptured() async {
-        let model = viewModel
-        await recompute(model, capabilities: accessibilityOnly)
-        #expect(model.rows.map(\.content) == [.appName, .appName])
-        #expect(snapshotter.requested.isEmpty)
-    }
-
-    @Test func failedCaptureKeepsTheAppNameAndDoesNotStopTheOthers() async {
-        let b = image()
-        snapshotter.images = [2: b]
-        let model = viewModel
-        await recompute(model)
-        #expect(model.rows.map(\.content) == [.appName, .snapshot(b)])
-        #expect(snapshotter.requested == [1, 2])
-    }
-
-    @Test func snapshotArrivingAfterANewerRecomputeIsDropped() async {
-        let stale = image()
-        let fresh = image()
-        snapshotter.images = [1: stale]
-        snapshotter.holdWindows = [1]
-        let model = viewModel
-        let first = Task { await recompute(model) }
-        // Bounded: a broken match must fail this test, not hang the whole run.
-        for _ in 0..<100 where snapshotter.requested.isEmpty { await Task.yield() }
-
-        snapshotter.holdWindows = []
-        snapshotter.images = [1: fresh]
-        await recompute(model, items: [entry("a", x: 10, width: 90, windowID: 1)])
-        snapshotter.release(1)
-        await first.value
-
-        #expect(model.rows.map(\.content) == [.snapshot(fresh)])
-        #expect(snapshotter.requested == [1, 1])
     }
 }

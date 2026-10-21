@@ -8,7 +8,7 @@ public struct WindowInfo: Equatable, Sendable {
     /// Bundle identifier of the window's owning process; `nil` when it has none. On macOS 26 this
     /// is Control Center for every status item, so it does not identify the real owner.
     public let ownerBundleID: String?
-    /// Empty when the window has no name, which is always the case without Screen Recording.
+    /// Empty when the window has no name, which is always the case without screen-capture access.
     public let title: String
 
     public init(

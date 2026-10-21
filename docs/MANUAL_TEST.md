@@ -22,11 +22,9 @@ it. Everything left of the pipe is what the arrow hides.
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 1.1 | First launch with no permissions | Onboarding lists only Accessibility; its button opens the Accessibility pane. No Screen Recording prompt appears | |
-| 1.2 | Grant Accessibility only, switch back to the app | Onboarding closes without a restart; the strip shows app names, its rows are clickable | |
-| 1.3 | Grant Screen Recording only | Onboarding still lists Accessibility; strip rows are not clickable; nothing is moved | |
-| 1.4 | No permissions at all | Hiding with the arrow still works; nothing is moved or clicked | |
-| 1.5 | Revoke Screen Recording while running | The strip falls back to app names; no crash | |
+| 1.1 | First launch without Accessibility | A "Welcome to Hidebar" window lists Accessibility; no system prompt appears until "Open System Settings" is clicked, which asks for the permission and opens the Accessibility pane. No other permission is ever requested | |
+| 1.2 | Grant Accessibility, switch back to the app | The window closes without a restart; the strip shows each app's name and icon, its rows are clickable | |
+| 1.3 | No permissions at all | Hiding with the arrow still works; nothing is moved or clicked | |
 
 ## 2. Collapse and expand
 
@@ -47,11 +45,10 @@ it. Everything left of the pipe is what the arrow hides.
 |---|---|---|---|
 | 3.1 | Right-click the pipe, then the arrow | The same menu opens under each | |
 | 3.2 | Control-click and middle-click the arrow | The same menu opens; a plain left click collapses or expands and opens no menu | |
-| 3.3 | Open the menu without Screen Recording | Items: "Show Icon Images…", "How to Use Hidebar…", a separator, "Quit Hidebar". "Show Icon Images…" shows the system prompt and opens the Screen Recording pane | |
-| 3.4 | Open the menu with Screen Recording granted | No "Show Icon Images…" item | |
-| 3.5 | Choose "How to Use Hidebar…" | The app comes to the front and a window explains the arrow, the pipe, Command-drag, the menu, the overflow strip and the permissions; OK closes it | |
-| 3.6 | Choose "Quit Hidebar" while collapsed | The app quits and all icons are visible | |
-| 3.7 | Collapse, then open the menu from the arrow | The menu opens although the pipe is stretched | |
+| 3.3 | Open the menu | Items: "How to Use Hidebar…", a separator, "Quit Hidebar" | |
+| 3.4 | Choose "How to Use Hidebar…" | The app comes to the front and a window explains the arrow, the pipe, Command-drag, the menu, the overflow strip and the Accessibility permission; OK closes it | |
+| 3.5 | Choose "Quit Hidebar" while collapsed | The app quits and all icons are visible | |
+| 3.6 | Collapse, then open the menu from the arrow | The menu opens although the pipe is stretched | |
 
 ## 4. Discovery and identity (needs Accessibility)
 
