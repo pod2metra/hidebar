@@ -153,8 +153,7 @@ Without arguments, `bash scripts/package.sh` makes the ad-hoc `build/Hidebar.dmg
 - The Release run builds the DMG with Xcode 27.0 and fails unless `xcodebuild -version`
   reports exactly `XCODE_VERSION` and `XCODE_BUILD` from `release.yml`. That is a version and
   build pin, not a beta detector: before raising it, confirm from the runner image notes that
-  the new Xcode is a GA release. `XCODE_BUILD` must be filled in with the GA build before the
-  first release. The CI `build-app` job uses the same toolchain; keep its `DEVELOPER_DIR` in
+  the new Xcode is a GA release. The CI `build-app` job uses the same toolchain; keep its `DEVELOPER_DIR` in
   sync with `release.yml` (the other CI jobs run on 27.1).
 - If the run fails at "Update Homebrew tap" (for example, an expired `TAP_TOKEN`), the
   release already holds a DMG the cask does not know. Fix the cause and start *Run workflow*

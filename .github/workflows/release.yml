@@ -34,9 +34,9 @@ env:
   # uses. "Require the pinned Xcode" fails unless the version and the build below match exactly.
   DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
   XCODE_VERSION: "27.0"
-  # Build of the GA Xcode 27.0, as the runner image notes list it. Unknown offline (no macos-27 readme
-  # in actions/runner-images): fill it in before the first release; empty fails the check.
-  XCODE_BUILD: ""
+  # Build of the GA Xcode 27.0, as images/macos/xcode-27-arm64-Readme.md in actions/runner-images
+  # lists it (image 20261012.0260). Empty fails the check.
+  XCODE_BUILD: "27A266a"
 
 jobs:
   # The tag is created here, inside the same run: a tag pushed with GITHUB_TOKEN does not trigger
