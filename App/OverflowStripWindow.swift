@@ -68,7 +68,7 @@ final class OverflowStripWindow: NSObject {
         viewModel.recompute(
             screen: calculator, viewportWidth: frame.width - calculator.leftLimit, items: items,
             capabilities: services.permissions.current().capabilities,
-            own: services.separatorItems.ownBarItems)
+            own: services.separatorItems.ownBarItems?.on(screenFrom: frame.minX, width: frame.width))
         place(on: screen, from: calculator.leftLimit)
         drawRows()
         onIndicatorChange(viewModel.indicator)

@@ -28,6 +28,14 @@ public struct OwnBarItems: Equatable, Sendable {
         self.arrow = arrow
     }
 
+    /// `self` when the arrow's window starts on the screen spanning `minX..<minX + width`, else `nil`.
+    /// The items can sit on the bar of another display, whose frames never match the windows found
+    /// on this screen, so every icon would count as hidden. The pipe takes no part: while collapsed
+    /// its window reaches far past the left edge of the screen.
+    public func on(screenFrom minX: Double, width: Double) -> OwnBarItems? {
+        (minX..<minX + width).contains(arrow.x) ? self : nil
+    }
+
     /// True when `frame` is the window of the pipe or of the arrow. Height and top do not take part.
     public func contains(_ frame: ItemFrame) -> Bool {
         [separator, arrow].contains { Self.matches($0, frame) }

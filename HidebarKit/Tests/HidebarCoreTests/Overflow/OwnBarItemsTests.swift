@@ -58,4 +58,43 @@ import Testing
         #expect(!own.contains(frame(x: 38.5, width: 4)))
         #expect(!own.contains(frame(x: 40, width: 2.5)))
     }
+
+    // MARK: the arrow decides which screen the items are on
+
+    @Test func anArrowOnTheScreenKeepsTheOwnItems() {
+        let own = OwnBarItems(separator: pipe, arrow: arrow)
+        #expect(own?.on(screenFrom: 0, width: 1440) == own)
+    }
+
+    @Test func anArrowLeftOfTheScreenIsOnAnotherScreen() {
+        let own = OwnBarItems(separator: pipe, arrow: arrow)
+        #expect(own?.on(screenFrom: 100, width: 1440) == nil)
+    }
+
+    @Test func anArrowRightOfTheScreenIsOnAnotherScreen() {
+        let own = OwnBarItems(separator: pipe, arrow: arrow)
+        #expect(own?.on(screenFrom: 0, width: 80) == nil)
+    }
+
+    @Test func anArrowAtTheLeftEdgeOfTheScreenIsOnIt() {
+        let own = OwnBarItems(separator: pipe, arrow: arrow)
+        #expect(own?.on(screenFrom: 90, width: 1440) == own)
+    }
+
+    @Test func anArrowAtTheRightEdgeOfTheScreenIsOffIt() {
+        let own = OwnBarItems(separator: pipe, arrow: arrow)
+        #expect(own?.on(screenFrom: 0, width: 90) == nil)
+    }
+
+    @Test func aScreenLeftOfTheMainOneHasNegativeCoordinates() {
+        let onLeft = OwnBarItems(separator: BarSpan(x: -400, width: 4), arrow: BarSpan(x: -300, width: 10))
+        #expect(onLeft?.on(screenFrom: -1440, width: 1440) == onLeft)
+        #expect(onLeft?.on(screenFrom: 0, width: 1440) == nil)
+        #expect(OwnBarItems(separator: pipe, arrow: arrow)?.on(screenFrom: -1440, width: 1440) == nil)
+    }
+
+    @Test func aCollapsedPipeFarLeftDoesNotMoveTheItemsOffTheScreen() {
+        let collapsed = OwnBarItems(separator: BarSpan(x: -9910, width: 10000), arrow: arrow)
+        #expect(collapsed?.on(screenFrom: 0, width: 1440) == collapsed)
+    }
 }

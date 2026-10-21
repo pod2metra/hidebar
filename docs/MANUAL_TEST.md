@@ -88,6 +88,7 @@ it. Everything left of the pipe is what the arrow hides.
 | 5.16 | Accessibility off, everything right of the pipe fits the bar; collapse the section, switch between apps and change the screen layout | No dot at any point: the icons hidden on purpose are never counted | |
 | 5.17 | Accessibility off, expanded, icons right of the pipe behind the notch | The dot shows with the right N; the pipe and the arrow are not among the N | |
 | 5.18 | Same as 5.17, then collapse | N stays the number of icons right of the pipe that do not fit; the icons left of the pipe do not change it | |
+| 5.19 | Two displays, the second one left of the main one, Accessibility off; click the second display's menu bar so the pipe and the arrow show there; then click the main display's bar again | No dot while the items are on the second display (the strip may still list icons); back on the main display the dot matches 5.11 | |
 
 ## 6. Platforms
 
