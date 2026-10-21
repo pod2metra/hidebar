@@ -15,6 +15,7 @@ final class SeparatorItems {
 
     private let pipe: NSStatusItemAdapter
     private let arrow: NSStatusItemAdapter
+    private let badge: ArrowBadge
     private var targets: [ButtonTarget] = []
 
     init() {
@@ -28,6 +29,7 @@ final class SeparatorItems {
         controller.prepareForLaunch()
         SeparatorMark.apply(to: pipe.item)
         arrow.item.button?.setAccessibilityTitle("Hidebar arrow")
+        badge = ArrowBadge(button: arrow.item.button)
         targets = [
             ButtonTarget(button: pipe.item.button) { [weak self, pipe] click in
                 if click == .secondary { self?.onMenuRequest(pipe.item) }
@@ -51,6 +53,17 @@ final class SeparatorItems {
         arrow.setSymbol(state.arrowSymbolName)
     }
 
+    /// Where the app's own windows are, which discovery cannot tell without Accessibility; `nil`
+    /// while either window does not exist yet.
+    var ownBarItems: OwnBarItems? {
+        OwnBarItems(separator: pipe.item.barSpan, arrow: arrow.item.barSpan)
+    }
+
+    /// Marks the arrow while icons are hidden behind the notch or the menus; clears the mark when none are.
+    func show(_ indicator: NotchIndicator) {
+        badge.apply(indicator)
+    }
+
     /// Removes the middle-click monitors (left and right clicks need no cleanup); call when the app quits.
     func invalidate() {
         targets.forEach { $0.invalidate() }
@@ -62,5 +75,11 @@ extension NSStatusItem {
     /// the pipe pushes the item off the screen; `nil` when the item has no window.
     @MainActor var leftEdge: Double? {
         button?.window.map { Double($0.frame.minX) }
+    }
+
+    /// The item's window horizontally. Its x is the window server's x as well (only y is flipped
+    /// between AppKit and the window server), so it matches the window list's bounds.
+    @MainActor var barSpan: BarSpan? {
+        button?.window.map { BarSpan(x: Double($0.frame.minX), width: Double($0.frame.width)) }
     }
 }

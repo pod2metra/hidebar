@@ -14,6 +14,8 @@ public final class OverflowStripViewModel {
     /// Gap between neighbouring rows.
     public private(set) var spacing = 0.0
     public private(set) var scrollModel = ScrollModel(contentWidth: 0, viewportWidth: 0)
+    /// What the arrow shows about the rows.
+    public private(set) var indicator = NotchIndicator(hiddenCount: 0, canReach: true)
 
     /// True when every icon fits the bar: the strip is not shown.
     public var isHidden: Bool { rows.isEmpty }
@@ -39,46 +41,52 @@ public final class OverflowStripViewModel {
     }
 
     /// Rebuilds the rows, keeping the scroll offset within the new content.
+    ///
+    /// `own` is where the app's pipe and arrow are, read from their windows. It decides which
+    /// items are the app's and where the visible section starts, so that the icons hidden left of
+    /// the pipe are never counted. Without it the id heuristics still shape the rows, but the
+    /// indicator stays at zero: there is no boundary to count against.
     public func recompute(
         screen: OverflowCalculator, viewportWidth: Double, items: [DiscoveredItem],
-        capabilities: Capabilities
+        capabilities: Capabilities, own: OwnBarItems?
     ) {
-        let rightToLeft = Self.rightToLeft(Self.visibleSection(items))
+        let section = Self.visibleSection(items, boundaryX: own?.separator.x)
+        let rightToLeft = Self.rightToLeft(section)
         let overflow = screen.partition(itemWidths: rightToLeft.map(Self.width)).overflow
-        let strip = rightToLeft[overflow].reversed().filter(Self.isForeign)
+        let strip = rightToLeft[overflow].reversed().filter { Self.isForeign($0, own: own) }
         itemWidths = strip.map(Self.width)
         spacing = screen.spacing
         scrollModel = ScrollModel(
             contentWidth: Self.contentWidth(itemWidths, spacing: spacing), viewportWidth: viewportWidth,
             offset: scrollModel.offset)
         rows = strip.map { Self.row(for: $0, named: names.name(of: $0.item.id), capabilities: capabilities) }
+        indicator = NotchIndicator(hiddenCount: own == nil ? 0 : rows.count, canReach: capabilities.canMove)
     }
 
     public func scroll(_ input: ScrollInput) {
         scrollModel.apply(deltaX: input.offsetDelta)
     }
 
-    /// Clicks the icon of row `index`. Nil when there is no such row or the row is not clickable:
-    /// nothing is clicked then.
-    public func click(rowAt index: Int) -> ClickOutcome? {
-        guard rows.indices.contains(index), rows[index].isClickable else { return nil }
-        return clickIcon(rows[index].id)
+    /// Clicks the icon of row `index`. While Accessibility is off nothing is clicked: the row asks
+    /// for the permission instead. Nil when there is no such row or the row is not clickable.
+    public func click(rowAt index: Int) -> RowActivation? {
+        guard rows.indices.contains(index) else { return nil }
+        let row = rows[index]
+        if row.needsAccessibility { return .accessibilityNeeded }
+        guard row.isClickable else { return nil }
+        return .outcome(clickIcon(row.id))
     }
 
-    /// The separator and everything right of it; all items when the separator is not on the bar.
-    private static func visibleSection(_ items: [DiscoveredItem]) -> [DiscoveredItem] {
-        guard let boundary = items.first(where: { $0.item.id == OwnItems.separatorID }) else {
-            return items
-        }
-        return items.filter { isAtOrRight(of: boundary, $0) }
+    /// The separator and everything right of it. The boundary is the pipe's own window when it is
+    /// known, else the pipe found by id; all items when neither is on the bar.
+    private static func visibleSection(_ items: [DiscoveredItem], boundaryX: Double?) -> [DiscoveredItem] {
+        let byID = items.first(where: { $0.item.id == OwnItems.separatorID })?.item.frame.x
+        guard let boundary = boundaryX ?? byID else { return items }
+        return items.filter { $0.item.frame.x >= boundary }
     }
 
-    private static func isAtOrRight(of boundary: DiscoveredItem, _ found: DiscoveredItem) -> Bool {
-        found.item.frame.x >= boundary.item.frame.x
-    }
-
-    private static func isForeign(_ found: DiscoveredItem) -> Bool {
-        !OwnItems.isOwn(found.item.id)
+    private static func isForeign(_ found: DiscoveredItem, own: OwnBarItems?) -> Bool {
+        !OwnItems.isOwn(found.item.id) && !(own?.contains(found.item.frame) ?? false)
     }
 
     /// Rightmost first, as `OverflowCalculator.partition` expects; equal positions keep input order.
@@ -99,6 +107,7 @@ public final class OverflowStripViewModel {
     ) -> GroupPanelRow {
         GroupPanelRow(
             id: found.item.id, name: name,
-            isClickable: capabilities.canMove && found.isManaged && found.item.isMovable)
+            isClickable: capabilities.canMove && found.isManaged && found.item.isMovable,
+            needsAccessibility: !capabilities.canMove)
     }
 }

@@ -18,13 +18,15 @@ Run button) has another signature and looks ungranted. See `docs/XCODE_SETUP.md`
 The separator is two status items: the pipe (a thin vertical line) and the arrow right of
 it. Everything left of the pipe is what the arrow hides.
 
-## 1. Permissions and onboarding
+## 1. Permissions (asked on demand)
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 1.1 | First launch without Accessibility | A "Welcome to Hidebar" window lists Accessibility; no system prompt appears until "Open System Settings" is clicked, which asks for the permission and opens the Accessibility pane. No other permission is ever requested | |
-| 1.2 | Grant Accessibility, switch back to the app | The window closes without a restart; the strip shows each app's name and icon, its rows are clickable | |
-| 1.3 | No permissions at all | Hiding with the arrow still works; nothing is moved or clicked | |
+| 1.1 | Launch with Accessibility off (`tccutil reset Accessibility app.hidebar.Hidebar` first) | No window and no system prompt appears; the pipe and the arrow are on the bar. Clicking the arrow hides and shows the icons. No other permission is ever requested | |
+| 1.2 | With Accessibility off, right-click the arrow | The menu has "Reach Icons Behind the Notch…" above "How to Use Hidebar…" | |
+| 1.3 | Choose "Reach Icons Behind the Notch…" | The app comes to the front and an alert explains why Accessibility is needed, with "Open System Settings" and "Not Now". "Not Now" closes it and changes nothing; "Open System Settings" asks the system for the permission and opens the Accessibility pane | |
+| 1.4 | Grant Accessibility, switch back to the app | Without a restart: the strip rows become clickable and the menu no longer has "Reach Icons Behind the Notch…" | |
+| 1.5 | No permissions at all | Hiding with the arrow still works; nothing is moved or clicked | |
 
 ## 2. Collapse and expand
 
@@ -45,8 +47,8 @@ it. Everything left of the pipe is what the arrow hides.
 |---|---|---|---|
 | 3.1 | Right-click the pipe, then the arrow | The same menu opens under each | |
 | 3.2 | Control-click and middle-click the arrow | The same menu opens; a plain left click collapses or expands and opens no menu | |
-| 3.3 | Open the menu | Items: "How to Use Hidebar…", a separator, "Quit Hidebar" | |
-| 3.4 | Choose "How to Use Hidebar…" | The app comes to the front and a window explains the arrow, the pipe, Command-drag, the menu, the overflow strip and the Accessibility permission; OK closes it | |
+| 3.3 | Open the menu | Items: "How to Use Hidebar…", a separator, "Quit Hidebar"; with Accessibility off, "Reach Icons Behind the Notch…" comes first | |
+| 3.4 | Choose "How to Use Hidebar…" | The app comes to the front and a window explains the arrow, the pipe, Command-drag, the menu, the overflow strip, the dot on the arrow and when Accessibility is asked for; OK closes it | |
 | 3.5 | Choose "Quit Hidebar" while collapsed | The app quits and all icons are visible | |
 | 3.6 | Collapse, then open the menu from the arrow | The menu opens although the pipe is stretched | |
 
@@ -71,8 +73,21 @@ it. Everything left of the pipe is what the arrow hides.
 | 5.6 | Click an icon whose click opens no menu | The icon is restored within about 10 seconds | |
 | 5.7 | Keep an icon's menu open longer than 10 seconds | The icon stays where it is while any menu is open (an open menu window is detected on the pop-up menu layer); about 10 seconds after the menu closes it goes back, and the menu is never closed under you. A menu kept open (or a foreign window stuck on the menu layer) postpones the return for at most 120 seconds in all; after that the icon goes back regardless | |
 | 5.8 | Click an icon in the strip while collapsed | The icon's menu opens; afterwards the icon goes back and the section is hidden again | |
-| 5.9 | Click a strip row without Accessibility | The row is not clickable; nothing is moved | |
+| 5.9 | Click a strip row without Accessibility | Nothing is moved or clicked; the Accessibility alert from 1.3 opens | |
 | 5.10 | While a click is running, type and move the mouse | Input is never blocked; the cursor is put back where it was when the click ends | |
+
+### Notch indicator
+
+| # | Check | Expected | Result |
+|---|---|---|---|
+| 5.11 | On a Mac with a notch, Accessibility off, add icons until some fall behind the notch | An orange dot appears on the arrow; hovering it shows "N icons are behind the notch or the app's menus…" with the right N and the hint about "Reach Icons Behind the Notch…". The strip lists the same N icons | |
+| 5.12 | Remove icons (or quit apps) until everything fits | The dot and the tooltip disappear; the arrow looks as it did before any icon was hidden | |
+| 5.13 | Switch to an app with long menus, then back; plug or unplug a display | The dot and the count follow the strip (they update with the active app and with the screen parameters) | |
+| 5.14 | Grant Accessibility while the dot is shown | After switching back to the app the tooltip says to click the icons in the strip | |
+| 5.15 | macOS 27 or any Mac where the status windows are not listed | No dot and no crash; the arrow works as usual | |
+| 5.16 | Accessibility off, everything right of the pipe fits the bar; collapse the section, switch between apps and change the screen layout | No dot at any point: the icons hidden on purpose are never counted | |
+| 5.17 | Accessibility off, expanded, icons right of the pipe behind the notch | The dot shows with the right N; the pipe and the arrow are not among the N | |
+| 5.18 | Same as 5.17, then collapse | N stays the number of icons right of the pipe that do not fit; the icons left of the pipe do not change it | |
 
 ## 6. Platforms
 

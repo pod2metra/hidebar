@@ -74,11 +74,11 @@ import Testing
             screenWidth: 25, notchRightArea: nil, menusWidth: 0, spacing: 0)
         strip.recompute(
             screen: screen, viewportWidth: 25, items: scene.found,
-            capabilities: PermissionsState(accessibility: true).capabilities)
+            capabilities: PermissionsState(accessibility: true).capabilities, own: nil)
         #expect(strip.rows.map(\.id) == [moveID("a")])
         scene.script(wait: 2, moves: "a", to: 22)
 
-        #expect(strip.click(rowAt: 0) == .clicked)
+        #expect(strip.click(rowAt: 0) == .outcome(.clicked))
 
         #expect(scene.item.lengthWrites == revealCycle)
         #expect(scene.lengthAtWaits == [scene.normal, scene.normal])

@@ -49,11 +49,12 @@ import Testing
 
     private func recompute(
         _ model: OverflowStripViewModel, items: [DiscoveredItem]? = nil, viewport: Double = 40,
-        screen custom: OverflowCalculator? = nil, capabilities: Capabilities? = nil
+        screen custom: OverflowCalculator? = nil, capabilities: Capabilities? = nil,
+        own: OwnBarItems? = nil
     ) {
         model.recompute(
             screen: custom ?? screen, viewportWidth: viewport, items: items ?? scene,
-            capabilities: capabilities ?? granted)
+            capabilities: capabilities ?? granted, own: own)
     }
 
     // MARK: partition into rows
@@ -238,7 +239,7 @@ import Testing
     @Test func clickingAClickableRowClicksItsIconThroughTheInjectedAction() {
         let model = viewModel
         recompute(model)
-        #expect(model.click(rowAt: 1) == .clicked)
+        #expect(model.click(rowAt: 1) == .outcome(.clicked))
         #expect(clicks.ids == [moveID("b")])
     }
 
@@ -246,7 +247,42 @@ import Testing
         clicks.outcome = .revealFailed
         let model = viewModel
         recompute(model)
-        #expect(model.click(rowAt: 0) == .revealFailed)
+        #expect(model.click(rowAt: 0) == .outcome(.revealFailed))
+    }
+
+    // MARK: Accessibility asked for on demand
+
+    @Test func withoutAccessibilityEveryRowAsksForIt() {
+        let model = viewModel
+        recompute(model, capabilities: none)
+        #expect(model.rows.map(\.needsAccessibility) == [true, true])
+        recompute(model)
+        #expect(model.rows.map(\.needsAccessibility) == [false, false])
+    }
+
+    @Test func clickingARowWithoutAccessibilityAsksForItAndClicksNothing() {
+        let model = viewModel
+        recompute(model, capabilities: none)
+        #expect(model.click(rowAt: 0) == .accessibilityNeeded)
+        #expect(model.click(rowAt: 1) == .accessibilityNeeded)
+        #expect(clicks.ids.isEmpty)
+    }
+
+    @Test func clickingAMissingRowWithoutAccessibilityDoesNothing() {
+        let model = viewModel
+        recompute(model, capabilities: none)
+        #expect(model.click(rowAt: model.rows.count) == nil)
+        #expect(model.click(rowAt: -1) == nil)
+    }
+
+    @Test func aRowIsEnabledWhenItClicksOrAsksForAccessibility() {
+        let items = scene + [entry("pinned", x: 20, width: 90, movable: false)]
+        let model = viewModel
+        recompute(model, items: items)
+        #expect(model.rows.map(\.id) == [moveID("a"), moveID("pinned"), moveID("b")])
+        #expect(model.rows.map(\.isEnabled) == [true, false, true])
+        recompute(model, items: items, capabilities: none)
+        #expect(model.rows.map(\.isEnabled) == [true, true, true])
     }
 
     @Test func clickOnAnUnclickableOrMissingRowClicksNothing() {

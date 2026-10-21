@@ -8,7 +8,7 @@ import HidebarSystem
 final class AppController: NSObject {
     private let services = AppServices()
     private let strip: OverflowStripWindow
-    private let onboarding = OnboardingWindow()
+    private let accessibilityRequest = AccessibilityRequest()
     private let menu: AppMenu
     private var permissions: PermissionsState
 
@@ -18,8 +18,10 @@ final class AppController: NSObject {
         permissions = services.permissions.current()
         super.init()
         services.separatorItems.onArrowClick = { [weak self] in self?.arrowClicked() }
-        services.separatorItems.onMenuRequest = { [menu] item in menu.show(under: item) }
-        strip.onRowClick = { [weak self] outcome in self?.show(outcome) }
+        services.separatorItems.onMenuRequest = { [weak self] item in self?.showMenu(under: item) }
+        menu.onReachIcons = { [weak self] in self?.requestAccessibility() }
+        strip.onRowClick = { [weak self] activation in self?.handle(activation) }
+        strip.onIndicatorChange = { [separatorItems = services.separatorItems] in separatorItems.show($0) }
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(screensChanged), name: NSWorkspace.didActivateApplicationNotification,
             object: nil)
@@ -28,8 +30,8 @@ final class AppController: NSObject {
             object: nil)
     }
 
+    /// Nothing is asked of the user at launch: hiding works without any permission.
     func start() {
-        onboarding.update(permissions)
         strip.barDidChange()
     }
 
@@ -45,7 +47,6 @@ final class AppController: NSObject {
         let now = services.permissions.current()
         guard now != permissions else { return }
         permissions = now
-        onboarding.update(now)
         strip.barDidChange()
     }
 
@@ -69,8 +70,27 @@ final class AppController: NSObject {
         items.showArrow(collapsed: composition.isCollapsed)
     }
 
-    private func show(_ outcome: ClickOutcome) {
-        UserMessages.text(for: outcome).map(show(message:))
+    /// The request is in the menu only while Accessibility is off.
+    private func showMenu(under item: NSStatusItem) {
+        let title = PermissionPrompt.reachIconsMenuTitle(for: services.permissions.current())
+        menu.show(under: item, reachIconsTitle: title)
+    }
+
+    private func handle(_ activation: RowActivation) {
+        switch activation {
+        case .outcome(let outcome): UserMessages.text(for: outcome).map(show(message:))
+        case .accessibilityNeeded: requestAccessibility()
+        }
+    }
+
+    /// Asks for Accessibility. Rows drawn before a grant was noticed still ask: the grant is looked
+    /// at again first, and when it is there the rows are rebuilt instead of showing the request.
+    private func requestAccessibility() {
+        guard PermissionPrompt.isNeeded(in: services.permissions.current()) else {
+            permissionsMayHaveChanged()
+            return
+        }
+        accessibilityRequest.ask()
     }
 
     /// The screens or the app that owns the menu bar changed: the room for icons changed with them.

@@ -39,16 +39,17 @@ Hidebar puts one divider in the menu bar: a pipe (`|`) and an arrow to the right
 
 - **Collapse and expand.** Click the arrow. Everything left of the pipe is hidden; click again to bring it back. Hidebar always starts expanded.
 - **Choose what is hidden.** Hold ⌘ and drag an icon (the system's own gesture) to the left of the pipe to hide it, or to the right to keep it visible. Keep the arrow right of the pipe: if it would be hidden along with the icons, Hidebar does not collapse.
-- **Menu.** Right-click, Control-click or middle-click the pipe or the arrow for: How to Use Hidebar…, Quit Hidebar.
+- **Menu.** Right-click, Control-click or middle-click the pipe or the arrow for: How to Use Hidebar…, Quit Hidebar. While Accessibility is off the menu also has Reach Icons Behind the Notch….
 - **Overflow strip.** Icons right of the pipe that do not fit the bar, because they sit under the notch or the app menus, appear in a scrollable strip below the bar, each with its app name and icon. Click one there to click the real icon.
+- **Notch indicator.** While some icons are behind the notch or the app menus, a small orange dot sits on the arrow, and its tooltip says how many. With no hidden icons the arrow looks as usual. Seeing which icons are hidden needs no permission; the app menus' width is only known with Accessibility, so without it only the icons under the notch are counted.
 
 ## Permissions
 
-Hidebar needs one permission, and works with fewer features when it is missing; it never refuses to run.
+Hidebar needs one permission, and only for one feature. It asks for nothing at launch: hiding and showing icons works from the first run. It never refuses to run.
 
 | Permission | Why | Without it |
 |---|---|---|
-| Accessibility | Tells which app owns each icon and clicks icons from the overflow strip with synthetic ⌘-drag and mouse events. When it is missing at launch, a "Welcome to Hidebar" window opens; the system prompt appears after you click "Open System Settings". | Hiding with the divider still works; the strip lists icons but cannot click them |
+| Accessibility | Tells which app owns each icon and clicks icons from the overflow strip with synthetic ⌘-drag and mouse events. While it is off, Hidebar asks when you click a row of the strip, or when you choose Reach Icons Behind the Notch… in the menu. The request explains why and has an "Open System Settings" button; the grant is picked up when you switch back to the app. | Hiding with the divider still works; the strip and the arrow's dot still show which icons are hidden, but the icons cannot be clicked |
 
 macOS ties the grant to the app's code signature. Hidebar is not sandboxed, because a sandboxed app cannot click other apps' icons.
 

@@ -18,8 +18,10 @@ final class OverflowStripWindow: NSObject {
         }
     }
 
-    /// Called with what came of clicking a row's icon.
-    var onRowClick: (ClickOutcome) -> Void = { _ in }
+    /// Called with what came of clicking a row.
+    var onRowClick: (RowActivation) -> Void = { _ in }
+    /// Called after every refresh with what the arrow should show about the rows.
+    var onIndicatorChange: (NotchIndicator) -> Void = { _ in }
 
     private static let height = 36.0
 
@@ -65,9 +67,11 @@ final class OverflowStripWindow: NSObject {
         let items = await services.discovery.discover(on: services.background)
         viewModel.recompute(
             screen: calculator, viewportWidth: frame.width - calculator.leftLimit, items: items,
-            capabilities: services.permissions.current().capabilities)
+            capabilities: services.permissions.current().capabilities,
+            own: services.separatorItems.ownBarItems)
         place(on: screen, from: calculator.leftLimit)
         drawRows()
+        onIndicatorChange(viewModel.indicator)
     }
 
     private func place(on screen: NSScreen, from leftLimit: Double) {
