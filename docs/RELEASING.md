@@ -121,6 +121,26 @@ or download the DMG from the Release. Either way, the first launch is blocked by
 they open *System Settings -> Privacy & Security*, scroll down and press *Open Anyway* next to
 Hidebar. The cask prints this as a caveat.
 
+## Pre-release builds
+
+To hand someone a test build of any branch without a release, open *Actions -> Release -> Run
+workflow*, pick the branch, tick `prerelease`, and leave `bump` as `none` and `tag` empty (the run
+fails if either is set). The `tag` job skips the `main`-only rule and the green-CI check, and tags the
+branch head `pre-X.Y.Z-N`, where `X.Y.Z` is the next patch version (`scripts/next_version.sh patch`)
+and `N` is the run number. The `release` job then runs the same build, signing and packaging steps as a
+release and publishes a GitHub *pre-release* (never marked latest):
+
+- Release title: `Hidebar X.Y.Z pre-release N`; notes: commit subjects since the last `v*` tag.
+- Asset: `Hidebar-X.Y.Z-pre.N.dmg`. The app reports version `X.Y.Z` and the run number as its build number.
+- Signed with the release certificate and the same bundle id, so the designated requirement matches
+  a release build and an existing Accessibility grant survives installing it.
+- Not added to the Homebrew tap; the DMG is the only way to get it.
+- The first launch may still ask for *Open Anyway*, as for a release.
+
+The tag does not start with `v`, so it never triggers the tag-pushed run and the release notes ignore it.
+To rebuild a pre-release, run the workflow with `tag` set to its name (`pre-X.Y.Z-N`); the DMG is
+replaced. Old pre-releases and their tags are not cleaned up automatically; delete them by hand.
+
 ## Trying the release build locally
 
 Import the `.p12` into a throwaway keychain (never your login keychain), put that keychain first

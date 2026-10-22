@@ -1,9 +1,12 @@
 name: Release
 
-# Builds, signs (self-signed certificate, no notarization) and publishes Hidebar, then updates the Homebrew tap. Three ways in:
+# Builds, signs (self-signed certificate, no notarization) and publishes Hidebar, then updates the Homebrew tap. Four ways in:
 #   - Run workflow with `bump`: the `tag` job creates the next vX.Y.Z tag on main, then `release` runs;
 #   - push a tag vMAJOR.MINOR.PATCH by hand;
-#   - Run workflow with `tag`: re-release an existing tag.
+#   - Run workflow with `tag`: re-release an existing tag (a vX.Y.Z or a pre-X.Y.Z-N one);
+#   - Run workflow with `prerelease` from any branch: the `tag` job creates pre-X.Y.Z-N, `release` publishes a
+#     GitHub pre-release and leaves the Homebrew tap alone. The tag must not start with `v`: the notes script
+#     (`git describe --match 'v*'`), the "already tagged" check and the push-tag trigger all key on that prefix.
 # See docs/RELEASING.md for the secrets this needs.
 on:
   push:
@@ -20,13 +23,20 @@ on:
         description: "Existing tag to release again (leave empty when giving a bump)"
         required: false
         type: string
+      prerelease:
+        description: "Tag the selected branch pre-X.Y.Z-N and publish a pre-release (leave bump 'none' and tag empty)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  # Every bump run shares one group, so two button presses cannot race for the same tag.
-  group: release-${{ (inputs.bump && inputs.bump != 'none') && 'bump' || inputs.tag || github.ref_name }}
+  # Every bump run shares one group, so two button presses cannot race for the same tag. A pre-release run gets a
+  # group of its own: its tag carries the run number, so it races with nothing, and it must neither wait for nor
+  # replace a queued release.
+  group: release-${{ inputs.prerelease && format('pre-{0}', github.run_id) || (inputs.bump && inputs.bump != 'none') && 'bump' || inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -42,7 +52,7 @@ jobs:
   # The tag is created here, inside the same run: a tag pushed with GITHUB_TOKEN does not trigger
   # the push-tag trigger above, so a separate tag-triggered run would never start.
   tag:
-    if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
+    if: github.event_name == 'workflow_dispatch' && (inputs.bump != 'none' || inputs.prerelease)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -53,10 +63,20 @@ jobs:
     env:
       BUMP: ${{ inputs.bump }}
       INPUT_TAG: ${{ inputs.tag }}
+      PRERELEASE: ${{ inputs.prerelease }}
+      RUN_NUMBER: ${{ github.run_number }}
     steps:
       - name: Check inputs and ref
         run: |
           set -euo pipefail
+          # A pre-release tags whatever branch was picked: no main-only rule, no CI gate.
+          if [ "$PRERELEASE" = "true" ]; then
+            if [ "$BUMP" != "none" ] || [ -n "$INPUT_TAG" ]; then
+              echo "a pre-release takes neither a bump nor a tag" >&2
+              exit 1
+            fi
+            exit 0
+          fi
           if [ -n "$INPUT_TAG" ]; then
             echo "give either a bump or an existing tag, not both" >&2
             exit 1
@@ -73,6 +93,7 @@ jobs:
           persist-credentials: false
 
       - name: Require green CI on this commit
+        if: ${{ !inputs.prerelease }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -91,6 +112,7 @@ jobs:
           fi
 
       - name: Refuse a commit that already has a version tag
+        if: ${{ !inputs.prerelease }}
         run: |
           set -euo pipefail
           existing="$(git tag --points-at HEAD --list 'v*')"
@@ -105,11 +127,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version="$(bash scripts/next_version.sh "$BUMP")"
-          tag="v$version"
+          if [ "$PRERELEASE" = "true" ]; then
+            version="$(bash scripts/next_version.sh patch)"
+            tag="pre-$version-$RUN_NUMBER"
+            message="Hidebar $version pre-release $RUN_NUMBER"
+          else
+            version="$(bash scripts/next_version.sh "$BUMP")"
+            tag="v$version"
+            message="Hidebar $version"
+          fi
           git -c user.name="github-actions[bot]" \
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            tag -a "$tag" -m "Hidebar $version"
+            tag -a "$tag" -m "$message"
           gh auth setup-git --hostname github.com
           git push origin "refs/tags/$tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -126,6 +155,7 @@ jobs:
       TAG: ${{ needs.tag.outputs.tag || inputs.tag || github.ref_name }}
       INPUT_BUMP: ${{ inputs.bump }}
       INPUT_TAG: ${{ inputs.tag }}
+      INPUT_PRERELEASE: ${{ inputs.prerelease }}
     defaults:
       run:
         shell: bash
@@ -133,12 +163,13 @@ jobs:
       - name: Validate inputs
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "$INPUT_BUMP" = "none" ] && [ -z "$INPUT_TAG" ]; then
-            echo "set either a bump or an existing tag" >&2
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "$INPUT_BUMP" = "none" ] && [ -z "$INPUT_TAG" ] \
+              && [ "$INPUT_PRERELEASE" != "true" ]; then
+            echo "set a bump, an existing tag or prerelease" >&2
             exit 1
           fi
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "tag '$TAG' is not vMAJOR.MINOR.PATCH" >&2
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && ! "$TAG" =~ ^pre-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+            echo "tag '$TAG' is neither vMAJOR.MINOR.PATCH nor pre-MAJOR.MINOR.PATCH-N" >&2
             exit 1
           fi
 
@@ -151,11 +182,30 @@ jobs:
       - name: Prepare
         run: |
           set -euo pipefail
+          # package.sh wants MAJOR.MINOR.PATCH and writes build/Hidebar-$VERSION.dmg; a pre-release
+          # uploads that file as Hidebar-X.Y.Z-pre.N.dmg (ASSET), a release uploads it as it is.
+          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            version="${BASH_REMATCH[1]}"
+            prerelease=false
+            pre_number=""
+            asset="build/Hidebar-$version.dmg"
+          elif [[ "$TAG" =~ ^pre-([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+            version="${BASH_REMATCH[1]}"
+            prerelease=true
+            pre_number="${BASH_REMATCH[2]}"
+            asset="build/Hidebar-$version-pre.$pre_number.dmg"
+          else
+            echo "tag '$TAG' is neither vMAJOR.MINOR.PATCH nor pre-MAJOR.MINOR.PATCH-N" >&2
+            exit 1
+          fi
           {
-            echo "VERSION=${TAG#v}"
+            echo "VERSION=$version"
+            echo "PRERELEASE=$prerelease"
+            echo "PRE_NUMBER=$pre_number"
             echo "KEYCHAIN_PATH=$RUNNER_TEMP/hidebar-release.keychain-db"
             echo "APP=build/dd/Build/Products/Release/Hidebar.app"
-            echo "DMG=build/Hidebar-${TAG#v}.dmg"
+            echo "DMG=build/Hidebar-$version.dmg"
+            echo "ASSET=$asset"
           } >> "$GITHUB_ENV"
 
       - name: Require the pinned Xcode
@@ -244,21 +294,31 @@ jobs:
           fi
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
 
+      - name: Name the pre-release DMG
+        if: env.PRERELEASE == 'true'
+        run: mv "$DMG" "$ASSET"
+
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" "$DMG" --clobber
+            gh release upload "$TAG" "$ASSET" --clobber
           else
             notes="$RUNNER_TEMP/release-notes.md"
             bash scripts/release_notes.sh "$TAG" > "$notes"
-            gh release create "$TAG" "$DMG" --verify-tag \
-              --title "Hidebar $VERSION" --notes-file "$notes"
+            # --prerelease also keeps it from becoming the latest release.
+            if [ "$PRERELEASE" = "true" ]; then
+              flags=(--prerelease --title "Hidebar $VERSION pre-release $PRE_NUMBER")
+            else
+              flags=(--title "Hidebar $VERSION")
+            fi
+            gh release create "$TAG" "$ASSET" --verify-tag "${flags[@]}" --notes-file "$notes"
           fi
 
       - name: Update Homebrew tap
+        if: env.PRERELEASE != 'true'
         env:
           GH_TOKEN: ${{ secrets.TAP_TOKEN }}
           SHA256: ${{ steps.verify.outputs.sha256 }}
