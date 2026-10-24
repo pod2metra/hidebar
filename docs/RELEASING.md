@@ -107,7 +107,7 @@ The version comes only from the tag; `project.pbxproj` is never edited.
    - deletes the temporary keychain and the `.p12`.
 
 To re-run for an existing tag, use *Actions -> Release -> Run workflow*, leave `bump` as
-`none` and enter the tag. Give exactly one of `bump` and `tag`; the run fails otherwise.
+`none` and enter the tag. Give exactly one of `bump`, `tag` and `prerelease`; the run fails otherwise.
 If the GitHub Release already exists, the DMG is replaced and the cask is refreshed
 with the new checksum.
 
@@ -138,8 +138,10 @@ release and publishes a GitHub *pre-release* (never marked latest):
 - The first launch may still ask for *Open Anyway*, as for a release.
 
 The tag does not start with `v`, so it never triggers the tag-pushed run and the release notes ignore it.
-To rebuild a pre-release, run the workflow with `tag` set to its name (`pre-X.Y.Z-N`); the DMG is
-replaced. Old pre-releases and their tags are not cleaned up automatically; delete them by hand.
+To rebuild a pre-release, run the workflow with `tag` set to its name (`pre-X.Y.Z-N`) and
+`prerelease` unticked; the DMG is replaced, and the rebuilt app takes the new run's number as its
+build number, not `N`. Do not use "Re-run all jobs" on a pre-release run: the `tag` job would fail
+creating a tag that already exists. Old pre-releases and their tags are not cleaned up automatically; delete them by hand.
 
 ## Trying the release build locally
 
